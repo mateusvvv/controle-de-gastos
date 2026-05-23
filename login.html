@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Finanças Pessoais</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+    <div class="login-container">
+        <form id="login-form">
+            <h1 style="text-align: center; font-size: 1.5rem;">Controle Financeiro</h1>
+            <p>Entre com suas credenciais</p>
+            <div class="input-group">
+                <label for="username">Usuário</label>
+                <input type="email" id="username" placeholder="exemplo@email.com" required>
+            </div>
+            <div class="input-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit" class="btn-primary">Entrar</button>
+            <p id="error-message" class="error"></p>
+        </form>
+    </div>
+    <script src="auth.js"></script>
+</body>
+</html>
