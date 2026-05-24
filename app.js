@@ -36,6 +36,7 @@ const quickAddModal = document.getElementById('quick-add-modal');
 const modalCategorySelect = document.getElementById('modal-category');
 const modalOtherCategoryInput = document.getElementById('modal-other-category');
 const modalAmountInput = document.getElementById('modal-amount');
+const modalDateInput = document.getElementById('modal-date');
 // Auxiliares de Formatação
 const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -493,6 +494,7 @@ function openQuickAddModal() {
     modalOtherCategoryInput.value = '';
     modalOtherCategoryInput.classList.add('hidden');
     modalAmountInput.value = '';
+    if (modalDateInput) modalDateInput.value = '';
     modalCategorySelect.focus();
 }
 
@@ -520,6 +522,18 @@ document.getElementById('quick-add-form')?.addEventListener('submit', async (e) 
     }
 
     const amount = parseCurrency(modalAmountInput.value);
+    const modalDateRaw = modalDateInput.value;
+    let dueDay = new Date().getDate();
+    let dateStr;
+
+    if (modalDateRaw) {
+        const [y, m, d] = modalDateRaw.split('-');
+        dateStr = `${d}/${m}/${y}`;
+        dueDay = parseInt(d);
+    } else {
+        dateStr = new Date().toLocaleDateString('pt-BR');
+    }
+
     const description = `Conta de ${category}`; // Descrição padrão para contas essenciais
 
     const newExpenseData = {
@@ -527,8 +541,9 @@ document.getElementById('quick-add-form')?.addEventListener('submit', async (e) 
         amount: amount,
         category: category,
         isFixed: true, // Contas essenciais são sempre fixas
+        dueDay: dueDay,
         isPaid: false,
-        date: new Date().toLocaleDateString('pt-BR'),
+        date: dateStr,
         createdAt: serverTimestamp()
     };
     const docRef = await addDoc(collection(db, "users", currentUser.uid, "expenses"), newExpenseData);
@@ -539,6 +554,7 @@ document.getElementById('quick-add-form')?.addEventListener('submit', async (e) 
     modalOtherCategoryInput.value = '';
     modalOtherCategoryInput.classList.add('hidden');
     modalAmountInput.value = '';
+    modalDateInput.value = '';
     modalCategorySelect.focus(); // Foca na seleção de categoria para o próximo lançamento
     updateUI();
     alert(`Conta de ${category} adicionada com sucesso!`);
@@ -866,9 +882,14 @@ function renderRow(exp, container, icons, extraClass = '') {
     const tr = document.createElement('tr');
     if (extraClass) tr.className = extraClass;
     tr.innerHTML = `
-        <td>${exp.description}</td>
+        <td>
+            <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                <span style="font-weight: inherit;">${exp.description}</span>
+                <span style="font-size: 0.75rem; color: #7f8c8d; font-weight: normal;">${exp.date}</span>
+            </div>
+        </td>
         <td style="display: flex; align-items: center; gap: 8px;"><span>${icon}</span> ${exp.category}</td>
-        <td>${exp.isFixed ? '<span class="badge-fixed">Fixa Mensal</span>' : '<span class="badge-once">1x</span>'}</td>
+        <td>${exp.isFixed ? `<span class="badge-fixed">Fixa Mensal ${exp.dueDay ? `(Todo dia ${exp.dueDay})` : ''}</span>` : '<span class="badge-once">1x</span>'}</td>
         <td>${formatCurrency(exp.amount || 0)}</td>
         <td>${exp.receipt ? `<a href="${exp.receipt}" target="_blank">Ver</a>` : '-'}</td>
         <td style="display: flex; gap: 3px; justify-content: flex-end;">
