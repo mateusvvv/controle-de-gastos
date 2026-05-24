@@ -78,6 +78,9 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
     grid-template-columns: 1fr 1fr;
     gap: 14px;
 }
+.income-card.grouped-card {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
 .metric-block {
     display: flex;
     flex-direction: column;
@@ -92,6 +95,7 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
     padding-left: 14px;
 }
 .income-card {
+    grid-column: 1 / -1;
     background: linear-gradient(135deg, #ffffff 0%, #f5fbf8 100%);
     border: 1px solid #d9f0e4;
 }
@@ -104,6 +108,7 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
     min-height: 92px;
 }
 #final-reserve,
+.income-total-value,
 .fixed-debt-value,
 .variable-debt-value,
 .total-spent-value {
@@ -112,6 +117,7 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
     margin: 6px 0 0;
 }
 #final-reserve { color: #1f7a55; }
+.income-total-value { color: #167a5a; }
 .fixed-debt-value { color: #c0392b; }
 .variable-debt-value { color: #d35400; }
 .total-spent-value { color: #8e44ad; }
@@ -266,16 +272,32 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
     .container { padding: 8px; }
     .login-container { width: 90%; padding: 20px; }
     
-    .summary { grid-template-columns: 1fr; gap: 8px; }
+    .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .summary .card { padding: 12px; }
     .summary .card h3 { font-size: 0.7rem; }
     .summary .card p { font-size: 1.05rem !important; }
     .summary .card input { padding: 5px; font-size: 14px; }
-    .grouped-card { grid-template-columns: 1fr; }
+    .income-card { grid-column: 1 / -1; }
+    .grouped-card,
+    .income-card.grouped-card {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .metric-block {
+        justify-content: flex-start;
+    }
+    .metric-block h3 {
+        min-height: 28px;
+    }
     .metric-block + .metric-block {
         border-left: 0;
-        border-top: 1px solid #eef1f4;
         padding-left: 0;
+    }
+    .metric-block:nth-child(even) {
+        border-left: 1px solid #eef1f4;
+        padding-left: 10px;
+    }
+    .metric-block:nth-child(n + 3) {
+        border-top: 1px solid #eef1f4;
         padding-top: 10px;
     }
     
@@ -322,4 +344,10 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
     td:nth-of-type(4):before { content: "Valor"; }
     td:nth-of-type(5):before { content: "Recibo"; }
     td:nth-of-type(6):before { content: "Ações"; }
+}
+
+@media screen and (min-width: 601px) and (max-width: 900px) {
+    .income-card.grouped-card {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }

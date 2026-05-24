@@ -6,14 +6,20 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/fi
 
 let expenses = [];
 let budget = 0;
+let extraIncome = 0;
 let savingsGoal = 0;
 let walletValue = 0;
+let salaryDate = "";
+let extraIncomeDate = "";
 let expenseChart = null;
 let editingId = null;
 let currentUser = null;
 
 const expenseForm = document.getElementById('expense-form');
 const budgetInput = document.getElementById('monthly-budget');
+const extraIncomeInput = document.getElementById('extra-income');
+const salaryDateInput = document.getElementById('salary-date');
+const extraIncomeDateInput = document.getElementById('extra-income-date');
 const savingsGoalInput = document.getElementById('savings-goal');
 const walletInput = document.getElementById('wallet-value');
 const expensesList = document.getElementById('expenses-list');
@@ -40,16 +46,6 @@ const applyMask = (e) => {
 
 const getExpenseYearMonth = (dateStr) => {
     if (!dateStr) return null;
-
-    if (typeof dateStr.toDate === 'function') {
-        const date = dateStr.toDate();
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    }
-
-    if (dateStr instanceof Date) {
-        return `${dateStr.getFullYear()}-${String(dateStr.getMonth() + 1).padStart(2, '0')}`;
-    }
-
     const parts = String(dateStr).split(/[-/]/);
 
     if (parts.length < 3) return null;
@@ -57,14 +53,7 @@ const getExpenseYearMonth = (dateStr) => {
         return `${parts[0]}-${parts[1].padStart(2, '0')}`;
     }
 
-    const first = Number(parts[0]);
-    const second = Number(parts[1]);
-    const month = second > 12 ? first : second;
-    return `${parts[2]}-${String(month).padStart(2, '0')}`;
-};
-
-const getExpenseMonth = (expense) => {
-    return getExpenseYearMonth(expense.date) || getExpenseYearMonth(expense.createdAt);
+    return `${parts[2]}-${parts[1].padStart(2, '0')}`;
 };
 
 // Observador de Autenticação e Carregamento de Dados
@@ -77,14 +66,21 @@ onAuthStateChanged(auth, async (user) => {
         if (userDoc.exists()) {
             const data = userDoc.data();
             budget = data.budget || 0;
+            extraIncome = data.extraIncome || 0;
             savingsGoal = data.savingsGoal || 0;
             walletValue = data.walletValue || 0;
+            salaryDate = data.salaryDate || "";
+            extraIncomeDate = data.extraIncomeDate || "";
             
             budgetInput.value = budget > 0 ? formatCurrency(budget) : "";
+            extraIncomeInput.value = extraIncome > 0 ? formatCurrency(extraIncome) : "";
             savingsGoalInput.value = savingsGoal > 0 ? formatCurrency(savingsGoal) : "";
             walletInput.value = walletValue > 0 ? formatCurrency(walletValue) : "";
+            salaryDateInput.value = salaryDate;
+            extraIncomeDateInput.value = extraIncomeDate;
         }
 
+        // Carregar Coleção de Gastos
         // Define o mês atual como padrão no filtro
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
@@ -110,7 +106,7 @@ document.getElementById('toggle-summary-btn').addEventListener('click', function
 async function updateUserSettings() {
     if (!currentUser) return;
     await setDoc(doc(db, "users", currentUser.uid), {
-        budget, savingsGoal, walletValue
+        budget, extraIncome, savingsGoal, walletValue, salaryDate, extraIncomeDate
     }, { merge: true });
 }
 
@@ -120,6 +116,23 @@ budgetInput.addEventListener('input', (e) => {
     updateUI();
 });
 budgetInput.addEventListener('change', updateUserSettings);
+
+extraIncomeInput.addEventListener('input', (e) => {
+    applyMask(e);
+    extraIncome = parseCurrency(e.target.value);
+    updateUI();
+});
+extraIncomeInput.addEventListener('change', updateUserSettings);
+
+salaryDateInput.addEventListener('change', (e) => {
+    salaryDate = e.target.value;
+    updateUserSettings();
+});
+
+extraIncomeDateInput.addEventListener('change', (e) => {
+    extraIncomeDate = e.target.value;
+    updateUserSettings();
+});
 
 savingsGoalInput.addEventListener('input', (e) => {
     applyMask(e);
@@ -266,7 +279,6 @@ async function deleteExpense(id) {
 window.editExpense = editExpense;
 window.deleteExpense = deleteExpense;
 window.updateUI = updateUI;
-updateChart([]);
 
 function editExpense(id) {
     const exp = expenses.find(e => e.id === id);
@@ -287,14 +299,13 @@ function getFilteredExpenses() {
     if (!selectedMonth) return expenses;
 
     return expenses.filter(exp => {
-        return getExpenseMonth(exp) === selectedMonth;
+        return getExpenseYearMonth(exp.date) === selectedMonth;
     });
 }
 
 function updateChart(filteredData) {
     const canvas = document.getElementById('expenseChart');
-    const emptyMessage = document.getElementById('chart-empty-message');
-    if (!canvas) return;
+    if (!canvas || typeof Chart === 'undefined') return;
 
     if (expenseChart) {
         expenseChart.destroy();
@@ -313,12 +324,20 @@ function updateChart(filteredData) {
     });
 
     const hasData = totals.some(t => t > 0);
-    emptyMessage?.classList.toggle('hidden', hasData);
+    const emptyChartMessage = {
+        id: 'emptyChartMessage',
+        afterDraw(chart) {
+            if (hasData) return;
 
-    if (typeof Chart === 'undefined') {
-        drawFallbackChart(canvas, categories, totals, hasData);
-        return;
-    }
+            const { ctx, chartArea } = chart;
+            ctx.save();
+            ctx.fillStyle = '#7f8c8d';
+            ctx.font = '14px Segoe UI, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Sem gastos neste mês', (chartArea.left + chartArea.right) / 2, (chartArea.top + chartArea.bottom) / 2);
+            ctx.restore();
+        }
+    };
 
     expenseChart = new Chart(ctx, {
         type: 'bar',
@@ -343,7 +362,6 @@ function updateChart(filteredData) {
             scales: {
                 y: { 
                     beginAtZero: true,
-                    suggestedMax: hasData ? undefined : 100,
                     ticks: {
                         callback: function(value) {
                             return 'R$ ' + value.toLocaleString('pt-BR');
@@ -354,52 +372,8 @@ function updateChart(filteredData) {
             plugins: {
                 legend: { display: false }
             }
-        }
-    });
-}
-
-function drawFallbackChart(canvas, labels, totals, hasData) {
-    const ctx = canvas.getContext('2d');
-    const width = canvas.clientWidth || 900;
-    const height = canvas.clientHeight || 300;
-    const ratio = window.devicePixelRatio || 1;
-
-    canvas.width = width * ratio;
-    canvas.height = height * ratio;
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    ctx.clearRect(0, 0, width, height);
-
-    const maxValue = Math.max(...totals, 100);
-    const chartLeft = 48;
-    const chartRight = width - 16;
-    const chartBottom = height - 42;
-    const chartTop = 18;
-    const barArea = chartRight - chartLeft;
-    const barWidth = Math.max((barArea / labels.length) * 0.58, 22);
-    const colors = ['#4a90e2', '#2ecc71', '#e67e22', '#9b59b6', '#95a5a6'];
-
-    ctx.strokeStyle = '#e5e9ef';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(chartLeft, chartTop);
-    ctx.lineTo(chartLeft, chartBottom);
-    ctx.lineTo(chartRight, chartBottom);
-    ctx.stroke();
-
-    if (!hasData) return;
-
-    labels.forEach((label, index) => {
-        const slot = barArea / labels.length;
-        const x = chartLeft + slot * index + (slot - barWidth) / 2;
-        const barHeight = ((chartBottom - chartTop) * totals[index]) / maxValue;
-        const y = chartBottom - barHeight;
-
-        ctx.fillStyle = colors[index];
-        ctx.fillRect(x, y, barWidth, barHeight);
-        ctx.fillStyle = '#5f6f7a';
-        ctx.font = '12px Segoe UI, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(label, x + barWidth / 2, height - 16);
+        },
+        plugins: [emptyChartMessage]
     });
 }
 
@@ -434,14 +408,18 @@ function updateUI() {
     document.getElementById('fixed-total').innerText = formatCurrency(fixedTotal);
     document.getElementById('variable-total').innerText = formatCurrency(variableTotal);
     
+    // Renda Total
+    const totalIncome = budget + extraIncome;
+    document.getElementById('total-income').innerText = formatCurrency(totalIncome);
+
     // Saldo disponível após gastos
-    const availableAfterExpenses = budget - totalSpent;
+    const availableAfterExpenses = totalIncome - totalSpent;
     
     // Saldo que sobra depois que você tira o dinheiro da carteira e da meta
     const finalReserve = availableAfterExpenses - walletValue - savingsGoal;
     const reserveEl = document.getElementById('final-reserve');
     reserveEl.innerText = formatCurrency(finalReserve);
-    reserveEl.style.color = finalReserve >= 0 ? '#1f7a55' : 'var(--danger)';
+    reserveEl.style.color = finalReserve >= 0 ? '#2c3e50' : 'var(--danger)';
 
     // Lógica da Meta de Economia
     const goalStatus = document.getElementById('goal-status');
@@ -458,7 +436,7 @@ function updateUI() {
     }
 
     // Atualiza Barra de Progresso
-    const percent = budget > 0 ? Math.min((totalSpent / budget) * 100, 100) : 0;
+    const percent = totalIncome > 0 ? Math.min((totalSpent / totalIncome) * 100, 100) : 0;
     const progressBar = document.getElementById('progress-bar');
     progressBar.style.width = percent + '%';
     progressBar.style.backgroundColor = percent > 90 ? 'var(--danger)' : (percent > 70 ? '#e67e22' : 'var(--success)');

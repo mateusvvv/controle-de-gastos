@@ -37,8 +37,24 @@
             <div class="summary hidden-summary" id="summary-grid">
             <div class="card grouped-card income-card">
                 <div class="metric-block">
-                    <h3>Salário/Renda</h3>
+                    <h3>Renda Fixa Mensal</h3>
                     <input type="text" id="monthly-budget" placeholder="R$ 0,00">
+                </div>
+                <div class="metric-block">
+                    <h3>Recebido em (Fixo)</h3>
+                    <input type="date" id="salary-date">
+                </div>
+                <div class="metric-block">
+                    <h3>Renda Extra do Mês</h3>
+                    <input type="text" id="extra-income" placeholder="R$ 0,00">
+                </div>
+                <div class="metric-block">
+                    <h3>Recebido em (Extra)</h3>
+                    <input type="date" id="extra-income-date">
+                </div>
+                <div class="metric-block">
+                    <h3>Renda Total do Mês</h3>
+                    <p id="total-income" class="income-total-value">R$ 0,00</p>
                 </div>
                 <div class="metric-block reserve-block">
                     <h3>Saldo Não Alocado</h3>
@@ -72,7 +88,7 @@
             </div>
             
             <div class="card progress-card compact">
-                <h3>Uso do Salário</h3>
+                <h3>Uso da Renda</h3>
                 <div class="progress-container"><div id="progress-bar" class="progress-bar"></div></div>
                 <p id="progress-text">0% do salário utilizado</p>
             </div>
@@ -82,7 +98,7 @@
                 <h3>Distribuição por Categoria</h3>
                 <div class="chart-wrapper">
                     <canvas id="expenseChart" width="900" height="300"></canvas>
-                    <p id="chart-empty-message" class="chart-empty-message hidden">Sem gastos neste mês</p>
+                    <p id="chart-empty-message" class="chart-empty-message hidden">Sem gastos neste período</p>
                 </div>
             </div>
             </div>

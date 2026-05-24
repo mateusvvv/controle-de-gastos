@@ -39,7 +39,7 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// Lógica unificada para menu e navegação
+// Lógica Unificada para Menu, Navegação e Modal (Delegação de Eventos)
 document.addEventListener('click', (e) => {
     const dropdownMenu = document.getElementById('dropdown-menu') || document.querySelector('.dropdown-content');
     const sectionHome = document.getElementById('section-home');
@@ -71,6 +71,9 @@ document.addEventListener('click', (e) => {
     // Navegação: Histórico de Gastos
     if (e.target.id === 'menu-history') {
         e.preventDefault();
+        if (typeof document.getElementById('admin-modal') !== 'undefined' && document.getElementById('admin-modal')) {
+            document.getElementById('admin-modal').style.display = 'none';
+        }
         sectionHome?.classList.add('hidden');
         sectionHistory?.classList.remove('hidden');
         dropdownMenu?.classList.remove('show');
