@@ -164,7 +164,8 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
 }
 
 /* Botão de Resumo */
-.btn-summary-toggle {
+.btn-summary-toggle,
+#toggle-summary-btn {
     width: 100%;
     background: #f0f7ff;
     border: 1.5px solid var(--primary);
@@ -173,7 +174,7 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
     margin-bottom: 15px;
     cursor: pointer;
     font-weight: bold;
-    color: var(--primary);
+    color: var(--primary) !important;
     font-size: 0.95rem;
     transition: all 0.2s ease;
     box-shadow: 0 4px 6px rgba(74, 144, 226, 0.15);
