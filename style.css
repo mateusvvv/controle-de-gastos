@@ -166,19 +166,22 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
 /* Botão de Resumo */
 .btn-summary-toggle {
     width: 100%;
-    background: var(--white);
-    border: 1px solid #d1d8e0;
+    background: #f0f7ff;
+    border: 1.5px solid var(--primary);
     padding: 14px;
     border-radius: 8px;
     margin-bottom: 15px;
     cursor: pointer;
     font-weight: bold;
-    color: #34495e;
+    color: var(--primary);
     font-size: 0.95rem;
-    transition: background 0.2s, transform 0.1s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(74, 144, 226, 0.15);
 }
-.btn-summary-toggle:hover { background: #f8fafc; }
+.btn-summary-toggle:hover { 
+    background: #e1efff;
+    box-shadow: 0 6px 12px rgba(74, 144, 226, 0.2);
+}
 .btn-summary-toggle:active { transform: translateY(1px); }
 
 .hidden-summary { display: none !important; }
