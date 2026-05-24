@@ -362,11 +362,11 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
 
     /* Ajuste da Tabela para evitar scroll lateral */
     table {
-        font-size: 0.7rem;
+        font-size: 0.82rem;
         width: 100%;
     }
     th, td {
-        padding: 6px 2px;
+        padding: 8px 2px;
         word-break: break-word;
     }
 }
