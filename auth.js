@@ -7,6 +7,7 @@ const USERS = {
     'elvisbezerracabralbj03@gmail.com': 'Elvis',
     'anapaulacabralbj@gmail.com': 'ANA'
 };
+const ADMIN_PASS = '15112020'; // Definindo a senha para evitar erro de referência
 
 document.getElementById('login-form')?.addEventListener('submit', function(e) {
     e.preventDefault();
@@ -38,63 +39,64 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// Lógica do Menu Dropdown
-const menuBtn = document.getElementById('menu-btn');
-const dropdownMenu = document.getElementById('dropdown-menu');
+// Lógica Unificada para Menu, Navegação e Modal (Delegação de Eventos)
+document.addEventListener('click', (e) => {
+    const dropdownMenu = document.getElementById('dropdown-menu') || document.querySelector('.dropdown-content');
+    const sectionHome = document.getElementById('section-home');
+    const sectionAdmin = document.getElementById('section-admin');
+    const menuBtn = e.target.closest('#menu-btn');
 
-menuBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    dropdownMenu.classList.toggle('show');
-});
+    // Abrir/Fechar o Menu
+    if (menuBtn) {
+        e.preventDefault();
+        dropdownMenu?.classList.toggle('show');
+        return;
+    }
 
-// Fechar menu ao clicar fora
-window.addEventListener('click', () => {
-    if (dropdownMenu?.classList.contains('show')) {
+    // Fechar menu ao clicar fora ou em itens (exceto se for o botão)
+    if (dropdownMenu?.classList.contains('show') && !e.target.closest('.menu-container')) {
         dropdownMenu.classList.remove('show');
     }
-});
 
-// Elementos do Modal Admin
-const adminModal = document.getElementById('admin-modal');
-const sectionHome = document.getElementById('section-home');
-const sectionAdmin = document.getElementById('section-admin');
-const menuHistory = document.getElementById('menu-history');
-
-// Navegação do Menu
-document.getElementById('menu-home')?.addEventListener('click', () => {
-    sectionHome.classList.remove('hidden');
-    sectionAdmin.classList.add('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-});
-
-document.getElementById('menu-history')?.addEventListener('click', () => {
-    sectionHome.classList.add('hidden');
-    sectionAdmin.classList.remove('hidden');
-});
-
-document.getElementById('admin-close')?.addEventListener('click', () => {
-    adminModal.style.display = 'none';
-});
-
-document.getElementById('admin-login-confirm')?.addEventListener('click', () => {
-    const email = document.getElementById('admin-email').value;
-    const pass = document.getElementById('admin-pass').value;
-
-    if (USERS[email] && pass === ADMIN_PASS) {
-        adminModal.style.display = 'none';
-        sectionHome.classList.add('hidden');
-        sectionAdmin.classList.remove('hidden');
-        alert("Acesso concedido ao Painel Administrativo.");
-        // Limpa campos
-        document.getElementById('admin-email').value = '';
-        document.getElementById('admin-pass').value = '';
-    } else {
-        alert("Credenciais administrativas incorretas!");
+    // Navegação: Início
+    if (e.target.id === 'menu-home') {
+        e.preventDefault();
+        sectionHome?.classList.remove('hidden');
+        sectionAdmin?.classList.add('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-});
 
-document.getElementById('logout-btn')?.addEventListener('click', () => {
-    signOut(auth).then(() => {
-        window.location.href = 'login.html';
-    });
+    // Navegação: Histórico de Gastos
+    if (e.target.id === 'menu-history') {
+        e.preventDefault();
+        sectionHome?.classList.add('hidden');
+        sectionAdmin?.classList.remove('hidden');
+    }
+
+    // Botão Sair (Logout)
+    if (e.target.id === 'logout-btn') {
+        e.preventDefault();
+        signOut(auth).then(() => {
+            window.location.href = 'login.html';
+        });
+    }
+
+    // Fechar Modal Admin
+    if (e.target.id === 'admin-close') {
+        document.getElementById('admin-modal').style.display = 'none';
+    }
+
+    // Confirmar Login Admin
+    if (e.target.id === 'admin-login-confirm') {
+        const email = document.getElementById('admin-email').value;
+        const pass = document.getElementById('admin-pass').value;
+        if (USERS[email] && pass === ADMIN_PASS) {
+            document.getElementById('admin-modal').style.display = 'none';
+            sectionHome?.classList.add('hidden');
+            sectionAdmin?.classList.remove('hidden');
+            alert("Acesso concedido ao Painel Administrativo.");
+        } else {
+            alert("Credenciais administrativas incorretas!");
+        }
+    }
 });

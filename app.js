@@ -1,9 +1,16 @@
-let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
-let budget = parseFloat(localStorage.getItem('budget')) || 0;
-let savingsGoal = parseFloat(localStorage.getItem('savingsGoal')) || 0;
-let walletValue = parseFloat(localStorage.getItem('walletValue')) || 0;
+import { db, auth } from './firebase-config.js';
+import { 
+    collection, addDoc, getDocs, doc, setDoc, deleteDoc, updateDoc, getDoc, query, orderBy, serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+let expenses = [];
+let budget = 0;
+let savingsGoal = 0;
+let walletValue = 0;
 let expenseChart = null;
 let editingId = null;
+let currentUser = null;
 
 const expenseForm = document.getElementById('expense-form');
 const budgetInput = document.getElementById('monthly-budget');
@@ -31,19 +38,37 @@ const applyMask = (e) => {
     e.target.value = value ? "R$ " + value : "";
 };
 
-// Inicialização
-document.addEventListener('DOMContentLoaded', () => {
-    budgetInput.value = budget > 0 ? formatCurrency(budget) : "";
-    savingsGoalInput.value = savingsGoal > 0 ? formatCurrency(savingsGoal) : "";
-    walletInput.value = walletValue > 0 ? formatCurrency(walletValue) : "";
+// Observador de Autenticação e Carregamento de Dados
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        currentUser = user;
+        
+        // Carregar Configurações (Salário, Meta, Carteira)
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            budget = data.budget || 0;
+            savingsGoal = data.savingsGoal || 0;
+            walletValue = data.walletValue || 0;
+            
+            budgetInput.value = budget > 0 ? formatCurrency(budget) : "";
+            savingsGoalInput.value = savingsGoal > 0 ? formatCurrency(savingsGoal) : "";
+            walletInput.value = walletValue > 0 ? formatCurrency(walletValue) : "";
+        }
 
-    // Define o mês atual como padrão no filtro
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    document.getElementById('month-filter').value = currentMonth;
-    
-    checkRecurringAndInstallments();
-    updateUI();
+        // Carregar Coleção de Gastos
+        const q = query(collection(db, "users", user.uid, "expenses"), orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        expenses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Define o mês atual como padrão no filtro
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+        document.getElementById('month-filter').value = currentMonth;
+        
+        await checkRecurringAndInstallments();
+        updateUI();
+    }
 });
 
 // Controle do Painel de Resumo
@@ -53,24 +78,31 @@ document.getElementById('toggle-summary-btn').addEventListener('click', function
     this.innerText = summaryGrid.classList.contains('hidden-summary') ? '📊 Ver Resumo Financeiro' : '🔼 Ocultar Resumo';
 });
 
+async function updateUserSettings() {
+    if (!currentUser) return;
+    await setDoc(doc(db, "users", currentUser.uid), {
+        budget, savingsGoal, walletValue
+    }, { merge: true });
+}
+
 budgetInput.addEventListener('input', applyMask);
-budgetInput.addEventListener('change', (e) => {
+budgetInput.addEventListener('change', async (e) => {
     budget = parseCurrency(e.target.value);
-    localStorage.setItem('budget', budget);
+    await updateUserSettings();
     updateUI();
 });
 
 savingsGoalInput.addEventListener('input', applyMask);
-savingsGoalInput.addEventListener('change', (e) => {
+savingsGoalInput.addEventListener('change', async (e) => {
     savingsGoal = parseCurrency(e.target.value);
-    localStorage.setItem('savingsGoal', savingsGoal);
+    await updateUserSettings();
     updateUI();
 });
 
 walletInput.addEventListener('input', applyMask);
-walletInput.addEventListener('change', (e) => {
+walletInput.addEventListener('change', async (e) => {
     walletValue = parseCurrency(e.target.value);
-    localStorage.setItem('walletValue', walletValue);
+    await updateUserSettings();
     updateUI();
 });
 
@@ -99,50 +131,52 @@ expenseForm.addEventListener('submit', async (e) => {
         const startDate = new Date();
         for (let i = 0; i < installments; i++) {
             const futureDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, 15);
-            const newExpense = {
-                id: Date.now() + i,
+            const newExpenseData = {
                 description: `${description} (${i + 1}/${installments})`,
                 amount: amount,
                 category: category,
-                isFixed: false, // Parcelas não são "infinitas", são temporárias
+                isFixed: false,
                 date: futureDate.toLocaleDateString('pt-BR'),
-                receipt: receiptData
+                receipt: receiptData,
+                createdAt: serverTimestamp()
             };
-            expenses.push(newExpense);
+            const docRef = await addDoc(collection(db, "users", currentUser.uid, "expenses"), newExpenseData);
+            expenses.push({ id: docRef.id, ...newExpenseData });
         }
-        saveAndRefresh();
+        updateUI();
         expenseForm.reset();
         return;
     }
 
     if (editingId) {
+        const updatedData = {
+            description: description,
+            amount: amount,
+            category: category,
+            receipt: receiptData || expenses.find(e => e.id === editingId).receipt,
+            isFixed: isFixed
+        };
+        await updateDoc(doc(db, "users", currentUser.uid, "expenses", editingId), updatedData);
         const index = expenses.findIndex(exp => exp.id === editingId);
-        if (index !== -1) {
-            expenses[index] = {
-                ...expenses[index],
-                description: description,
-                amount: amount,
-                category: category,
-                receipt: receiptData || expenses[index].receipt,
-                isFixed: isFixed
-            };
-        }
+        if (index !== -1) expenses[index] = { ...expenses[index], ...updatedData };
+        
         editingId = null;
         expenseForm.querySelector('button[type="submit"]').innerText = 'Adicionar';
     } else {
-        const newExpense = {
-            id: Date.now(),
+        const newExpenseData = {
             description: document.getElementById('desc').value,
             amount: parseCurrency(document.getElementById('amount').value),
             category: document.getElementById('category').value,
             isFixed: document.getElementById('is-fixed').checked,
             date: new Date().toLocaleDateString(),
-            receipt: receiptData
+            receipt: receiptData,
+            createdAt: serverTimestamp()
         };
-        expenses.push(newExpense);
+        const docRef = await addDoc(collection(db, "users", currentUser.uid, "expenses"), newExpenseData);
+        expenses.push({ id: docRef.id, ...newExpenseData });
     }
 
-    saveAndRefresh();
+    updateUI();
     expenseForm.reset();
 });
 
@@ -153,12 +187,7 @@ const toBase64 = file => new Promise((resolve, reject) => {
     reader.onerror = error => reject(error);
 });
 
-function saveAndRefresh() {
-    localStorage.setItem('expenses', JSON.stringify(expenses));
-    updateUI();
-}
-
-function checkRecurringAndInstallments() {
+async function checkRecurringAndInstallments() {
     const now = new Date();
     const currentMonthStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
     
@@ -176,28 +205,38 @@ function checkRecurringAndInstallments() {
         return exp.isFixed && `${y}-${m.padStart(2, '0')}` === lastMonthStr;
     });
 
-    fixedFromLastMonth.forEach(oldExp => {
+    for (const oldExp of fixedFromLastMonth) {
         const alreadyCloned = currentExpenses.some(curr => curr.description === oldExp.description && curr.isFixed);
         if (!alreadyCloned) {
-            expenses.push({
+            const newFixedExpense = {
                 ...oldExp,
-                id: Date.now() + Math.random(),
-                date: now.toLocaleDateString('pt-BR')
-            });
+                date: now.toLocaleDateString('pt-BR'),
+                createdAt: serverTimestamp()
+            };
+            delete newFixedExpense.id; 
+            const docRef = await addDoc(collection(db, "users", currentUser.uid, "expenses"), newFixedExpense);
+            expenses.push({ id: docRef.id, ...newFixedExpense });
         }
-    });
-    localStorage.setItem('expenses', JSON.stringify(expenses));
+    }
 }
 
-function deleteExpense(id) {
+async function deleteExpense(id) {
     if (editingId === id) {
         editingId = null;
         expenseForm.reset();
         expenseForm.querySelector('button[type="submit"]').innerText = 'Adicionar';
     }
-    expenses = expenses.filter(exp => exp.id !== id);
-    saveAndRefresh();
+    
+    if (currentUser) {
+        await deleteDoc(doc(db, "users", currentUser.uid, "expenses", id));
+        expenses = expenses.filter(exp => exp.id !== id);
+        updateUI();
+    }
 }
+
+// Expor funções para o escopo global (necessário pois o script é um módulo)
+window.editExpense = editExpense;
+window.deleteExpense = deleteExpense;
 
 function editExpense(id) {
     const exp = expenses.find(e => e.id === id);
@@ -290,8 +329,8 @@ function updateUI() {
             <td>${formatCurrency(exp.amount || 0)}</td>
             <td>${exp.receipt ? `<a href="${exp.receipt}" target="_blank">Ver</a>` : '-'}</td>
             <td>
-                <button onclick="editExpense(${exp.id})" class="btn-primary" style="padding: 5px 10px; margin-right: 5px;">Editar</button>
-                <button onclick="deleteExpense(${exp.id})" class="btn-danger">X</button>
+                <button onclick="editExpense('${exp.id}')" class="btn-primary" style="padding: 5px 10px; margin-right: 5px;">Editar</button>
+                <button onclick="deleteExpense('${exp.id}')" class="btn-danger">X</button>
             </td>
         `;
         expensesList.appendChild(tr);
