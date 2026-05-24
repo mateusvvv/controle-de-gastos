@@ -489,12 +489,15 @@ document.getElementById('clear-form')?.addEventListener('click', (e) => {
 
 function openQuickAddModal() {
     quickAddModal.classList.remove('hidden');
+    const now = new Date();
+    const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+    
     // Resetar campos do modal
     modalCategorySelect.value = '';
     modalOtherCategoryInput.value = '';
     modalOtherCategoryInput.classList.add('hidden');
     modalAmountInput.value = '';
-    if (modalDateInput) modalDateInput.value = '';
+    if (modalDateInput) modalDateInput.value = today;
     modalCategorySelect.focus();
 }
 
@@ -889,7 +892,7 @@ function renderRow(exp, container, icons, extraClass = '') {
             </div>
         </td>
         <td style="display: flex; align-items: center; gap: 8px;"><span>${icon}</span> ${exp.category}</td>
-        <td>${exp.isFixed ? `<span class="badge-fixed">Fixa Mensal ${exp.dueDay ? `(Todo dia ${exp.dueDay})` : ''}</span>` : '<span class="badge-once">1x</span>'}</td>
+        <td>${exp.isFixed ? `<span class="badge-fixed">Fixa Mensal ${exp.dueDay ? `(Paga todo dia ${exp.dueDay} do início do mês)` : ''}</span>` : '<span class="badge-once">1x</span>'}</td>
         <td>${formatCurrency(exp.amount || 0)}</td>
         <td>${exp.receipt ? `<a href="${exp.receipt}" target="_blank">Ver</a>` : '-'}</td>
         <td style="display: flex; gap: 3px; justify-content: flex-end;">
