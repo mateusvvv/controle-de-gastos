@@ -31,6 +31,11 @@ const fileNameDisplay = document.getElementById('file-name-display');
 const categorySelect = document.getElementById('category');
 const otherCategoryInput = document.getElementById('other-category');
 
+// Elementos do Modal de Lançamento Rápido
+const quickAddModal = document.getElementById('quick-add-modal');
+const modalCategorySelect = document.getElementById('modal-category');
+const modalOtherCategoryInput = document.getElementById('modal-other-category');
+const modalAmountInput = document.getElementById('modal-amount');
 // Auxiliares de Formatação
 const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -167,6 +172,22 @@ function toggleInstallments(groupId) {
         rows.forEach(row => row.classList.toggle('hidden'));
     }
 }
+
+// Mostrar/Esconder campo de categoria personalizada no modal
+modalCategorySelect.addEventListener('change', (e) => {
+    if (e.target.value === 'Outros') {
+        modalOtherCategoryInput.classList.remove('hidden');
+        modalOtherCategoryInput.focus();
+    } else {
+        modalOtherCategoryInput.classList.add('hidden');
+        // Pula automaticamente para o campo de valor após escolher a categoria
+        if (e.target.value !== '') modalAmountInput.focus();
+    }
+});
+
+// Aplicar máscara de moeda no input de valor do modal
+modalAmountInput.addEventListener('input', applyMask);
+
 
 // Lógica para mostrar/esconder campo de dia de vencimento
 document.getElementById('is-fixed').addEventListener('change', function() {
@@ -338,10 +359,10 @@ expenseForm.addEventListener('submit', async (e) => {
             editingId = null;
             expenseForm.querySelector('button[type="submit"]').innerText = 'Adicionar';
         } else {
-            const dueDay = parseInt(document.getElementById('due-day').value);
+            const dueDayInput = document.getElementById('due-day').value;
             const now = new Date();
-            const dateStr = isFixed && dueDay ? 
-                `${dueDay.toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}` : 
+            const dateStr = isFixed && dueDayInput ? 
+                `${dueDayInput.toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}` : 
                 now.toLocaleDateString('pt-BR');
 
             const newExpenseData = {
@@ -359,10 +380,15 @@ expenseForm.addEventListener('submit', async (e) => {
             expenses.push({ id: docRef.id, ...newExpenseData });
         }
 
-        // Limpeza após salvar gasto único
-        expenseForm.reset();
+        // Limpeza parcial: mantém a categoria e data para facilitar múltiplos lançamentos
+        document.getElementById('desc').value = '';
+        document.getElementById('amount').value = '';
+        document.getElementById('other-category').value = '';
+        document.getElementById('other-category').classList.add('hidden');
+        if (receiptInput) receiptInput.value = '';
         if (fileNameDisplay) fileNameDisplay.innerText = 'Nenhum arquivo selecionado';
-        otherCategoryInput.classList.add('hidden');
+        
+        document.getElementById('desc').focus();
         updateUI();
     } catch (error) {
         console.error("Erro ao salvar gasto:", error);
@@ -439,6 +465,73 @@ async function checkRecurringAndInstallments() {
     }
 }
 
+// Função para Lançamento Rápido de Contas Essenciais
+document.getElementById('quick-add-essentials')?.addEventListener('click', async () => {
+    if (!currentUser) return;
+
+    if (confirm("Deseja abrir o lançador de contas essenciais para inserir valores?")) {
+        openQuickAddModal();
+    }
+});
+
+function openQuickAddModal() {
+    quickAddModal.classList.remove('hidden');
+    // Resetar campos do modal
+    modalCategorySelect.value = '';
+    modalOtherCategoryInput.value = '';
+    modalOtherCategoryInput.classList.add('hidden');
+    modalAmountInput.value = '';
+    modalCategorySelect.focus();
+}
+
+function closeQuickAddModal() {
+    quickAddModal.classList.add('hidden');
+}
+
+document.getElementById('close-quick-add-modal')?.addEventListener('click', closeQuickAddModal);
+
+// Lógica para adicionar despesa do modal
+document.getElementById('quick-add-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!currentUser) {
+        alert("Sessão expirada. Por favor, faça login novamente.");
+        return;
+    }
+
+    let category = modalCategorySelect.value;
+    if (category === 'Outros' && modalOtherCategoryInput.value.trim() !== '') {
+        category = modalOtherCategoryInput.value.trim();
+    } else if (category === 'Outros' && modalOtherCategoryInput.value.trim() === '') {
+        alert("Por favor, insira o nome da categoria personalizada.");
+        return;
+    }
+
+    const amount = parseCurrency(modalAmountInput.value);
+    const description = `Conta de ${category}`; // Descrição padrão para contas essenciais
+
+    const newExpenseData = {
+        description: description,
+        amount: amount,
+        category: category,
+        isFixed: true, // Contas essenciais são sempre fixas
+        isPaid: false,
+        date: new Date().toLocaleDateString('pt-BR'),
+        createdAt: serverTimestamp()
+    };
+    const docRef = await addDoc(collection(db, "users", currentUser.uid, "expenses"), newExpenseData);
+    expenses.push({ id: docRef.id, ...newExpenseData });
+
+    // Limpar campos do modal para adicionar mais
+    modalCategorySelect.value = '';
+    modalOtherCategoryInput.value = '';
+    modalOtherCategoryInput.classList.add('hidden');
+    modalAmountInput.value = '';
+    modalCategorySelect.focus(); // Foca na seleção de categoria para o próximo lançamento
+    updateUI();
+    alert(`Conta de ${category} adicionada com sucesso!`);
+});
+
 async function deleteExpense(id) {
     if (!confirm("Deseja realmente excluir este gasto?")) return;
     
@@ -514,7 +607,7 @@ function updateChart(filteredData) {
     const ctx = canvas.getContext('2d');
     
     // Agrupar totais por categoria
-    const categories = ['Água', 'Energia', 'Cartão de Crédito', 'Lazer', 'Gasolina', 'Outros'];
+    const categories = ['Água', 'Energia', 'Internet', 'Aluguel', 'Mercado', 'Cartão de Crédito', 'Lazer', 'Gasolina', 'Outros'];
     const data = filteredData || [];
     const totals = categories.map(cat => {
         return data
@@ -548,9 +641,12 @@ function updateChart(filteredData) {
                 backgroundColor: [
                     '#3498db', // Água
                     '#f1c40f', // Energia
+                    '#2ecc71', // Internet
+                    '#e67e22', // Aluguel
+                    '#1abc9c', // Mercado
                     '#e74c3c', // Cartão de Crédito
                     '#9b59b6', // Lazer
-                    '#e67e22', // Gasolina
+                    '#f39c12', // Gasolina
                     '#95a5a6'  // Outros
                 ],
                 borderRadius: 5
@@ -591,13 +687,14 @@ function updateUI() {
 
 function updateCalculationsOnly() {
     const filtered = getFilteredExpenses();
-    let totalPaid = filtered.filter(exp => exp.isPaid).reduce((sum, exp) => sum + exp.amount, 0);
+    const totalPaid = filtered.filter(exp => exp.isPaid).reduce((sum, exp) => sum + (exp.amount || 0), 0);
+    const totalCommitted = filtered.reduce((sum, exp) => sum + (exp.amount || 0), 0);
     
     // Renda Total
     const totalIncome = budget + extraIncome;
 
-    // Saldo da Renda Fixa após pagar as contas (Conforme solicitado: Orçamento Fixo - Gastos Pagos)
-    const finalReserve = budget - totalPaid;
+    // Saldo Projetado: Orçamento Fixo - Todos os gastos do mês (Planejamento real)
+    const finalReserve = budget - totalCommitted;
     
     const reserveEl = document.getElementById('final-reserve');
     reserveEl.innerText = formatCurrency(finalReserve);
@@ -621,6 +718,9 @@ function renderTableAndChart() {
     const categoryIcons = {
         'Água': '💧',
         'Energia': '⚡',
+        'Internet': '🌐',
+        'Aluguel': '🏠',
+        'Mercado': '🛒',
         'Cartão de Crédito': '💳',
         'Lazer': '🎡',
         'Gasolina': '⛽',
@@ -715,7 +815,7 @@ function renderRow(exp, container, icons, extraClass = '') {
     tr.innerHTML = `
         <td>${exp.description}</td>
         <td style="display: flex; align-items: center; gap: 8px;"><span>${icon}</span> ${exp.category}</td>
-        <td>${exp.isFixed ? '<span class="badge-fixed">Fixa</span>' : '<span class="badge-once">1x</span>'}</td>
+        <td>${exp.isFixed ? '<span class="badge-fixed">Fixa Mensal</span>' : '<span class="badge-once">1x</span>'}</td>
         <td>${formatCurrency(exp.amount || 0)}</td>
         <td>${exp.receipt ? `<a href="${exp.receipt}" target="_blank">Ver</a>` : '-'}</td>
         <td style="display: flex; gap: 3px; justify-content: flex-end;">

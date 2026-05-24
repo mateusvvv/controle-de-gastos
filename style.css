@@ -387,7 +387,7 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
     /* Mantém 2 colunas no mobile para os cards de resumo */
     .summary { grid-template-columns: 1fr 1fr; gap: 8px; }
     .summary .card { padding: 10px; }
-    .summary .card h3 { font-size: 0.65rem; margin-bottom: 4px; min-height: auto; }
+    .summary .card h3 { font-size: 0.7rem; margin-bottom: 4px; min-height: 40px; display: flex; align-items: center; }
     .summary .card p { font-size: 0.95rem !important; margin: 2px 0; }
     .summary .card input { padding: 6px; font-size: 13px; }
     
@@ -407,6 +407,8 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
         padding-top: 10px;
         text-align: center;
     }
+    
+    .metric-block h3 { min-height: auto !important; margin-bottom: 2px; }
 
     /* Ajuste de tamanho de fonte para valores no resumo mobile */
     #final-reserve,
@@ -414,10 +416,60 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
     .fixed-debt-value,
     .variable-debt-value,
     .total-spent-value {
-        font-size: 1.05rem;
+        font-size: 0.85rem;
         white-space: nowrap;
     }
 
+    /* Estilos do Modal */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal-content {
+        background: var(--white);
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        width: 90%;
+        max-width: 450px;
+        position: relative;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    .modal-content h3 {
+        color: #2c3e50;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 1.4rem;
+        text-align: center;
+    }
+
+    .modal-content p {
+        text-align: center;
+        color: #7f8c8d;
+        margin-bottom: 25px;
+        font-size: 0.95rem;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+        from { transform: translateY(-30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
     .progress-card.compact { padding: 10px; }
 
     .header-table { flex-direction: column; align-items: flex-start; gap: 10px; }

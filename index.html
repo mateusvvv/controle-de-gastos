@@ -92,6 +92,7 @@
 
             <div class="actions">
             <div class="card">
+                <button type="button" id="quick-add-essentials" class="btn-summary-toggle" style="background: #e3f2fd; border-color: #2196f3; color: #1976d2 !important; margin-bottom: 20px;">📝 Lançar Contas Essenciais</button>
                 <h3>Adicionar Gasto</h3>
                 <form id="expense-form">
                     <input type="text" id="desc" placeholder="Descrição (ex: Aluguel)" required>
@@ -105,6 +106,9 @@
                         <option value="" disabled selected>Selecione uma opção</option>
                         <option value="Água">💧 Água</option>
                         <option value="Energia">⚡ Energia</option>
+                        <option value="Internet">🌐 Internet</option>
+                        <option value="Aluguel">🏠 Aluguel</option>
+                        <option value="Mercado">🛒 Mercado</option>
                         <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
                         <option value="Lazer">🎡 Lazer</option>
                         <option value="Gasolina">⛽ Gasolina</option>
@@ -124,7 +128,10 @@
                         <input type="file" id="receipt" accept="image/*,application/pdf">
                         <span id="file-name-display" class="file-name-text">Nenhum arquivo selecionado</span>
                     </div>
-                    <button type="submit" class="btn-success">Adicionar</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn-success" style="flex: 2; width: auto;">Adicionar</button>
+                        <button type="reset" id="clear-form" class="btn-danger" style="flex: 1; background: #95a5a6;">Limpar</button>
+                    </div>
                 </form>
             </div>
             </div>
@@ -169,6 +176,37 @@
             </div>
         </section>
     </main>
+
+    <!-- Modal para Lançamento Rápido de Contas Essenciais -->
+    <div id="quick-add-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>Adicionar Conta Essencial</h3>
+            <p>Selecione a categoria e insira o valor da conta fixa mensal.</p>
+            <form id="quick-add-form">
+                <label for="modal-category">Tipo de conta</label>
+                <select id="modal-category" required>
+                    <option value="" disabled selected>Selecione uma opção</option>
+                    <option value="Água">💧 Água</option>
+                    <option value="Energia">⚡ Energia</option>
+                    <option value="Internet">🌐 Internet</option>
+                    <option value="Aluguel">🏠 Aluguel</option>
+                    <option value="Mercado">🛒 Mercado</option>
+                    <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+                    <option value="Lazer">🎡 Lazer</option>
+                    <option value="Gasolina">⛽ Gasolina</option>
+                    <option value="Outros">📁 Outros</option>
+                </select>
+                <input type="text" id="modal-other-category" placeholder="Nome da categoria personalizada" class="hidden">
+                <label for="modal-amount">Valor (R$)</label>
+                <input type="text" id="modal-amount" placeholder="R$ 0,00" required>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn-success" style="flex: 2;">Adicionar</button>
+                    <button type="button" id="close-quick-add-modal" class="btn-danger" style="flex: 1; background: #95a5a6;">Fechar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script type="module" src="auth.js"></script>
     <script type="module" src="app.js"></script>
 </body>
