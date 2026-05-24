@@ -80,22 +80,19 @@ onAuthStateChanged(auth, async (user) => {
             extraIncome = data.extraIncome || 0;
             savingsGoal = data.savingsGoal || 0;
             walletValue = data.walletValue || 0;
-            salaryDate = data.salaryDate || "";
-            extraIncomeDate = data.extraIncomeDate || "";
+            const now = new Date();
+            const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+            
+            salaryDate = data.salaryDate || today;
+            extraIncomeDate = data.extraIncomeDate || today;
             
             budgetInput.value = budget > 0 ? "R$ " + budget.toLocaleString('pt-BR') : "";
             extraIncomeInput.value = extraIncome > 0 ? "R$ " + extraIncome.toLocaleString('pt-BR') : "";
             savingsGoalInput.value = savingsGoal > 0 ? "R$ " + savingsGoal.toLocaleString('pt-BR') : "";
             walletInput.value = walletValue > 0 ? "R$ " + walletValue.toLocaleString('pt-BR') : "";
             
-            if (salaryDate) {
-                salaryDateInput.type = 'date';
-                salaryDateInput.value = salaryDate;
-            }
-            if (extraIncomeDate) {
-                extraIncomeDateInput.type = 'date';
-                extraIncomeDateInput.value = extraIncomeDate;
-            }
+            salaryDateInput.value = salaryDate;
+            extraIncomeDateInput.value = extraIncomeDate;
         }
 
         // Carregar Coleção de Gastos
