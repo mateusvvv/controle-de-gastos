@@ -326,7 +326,7 @@ function updateChart(filteredData) {
     const ctx = canvas.getContext('2d');
     
     // Agrupar totais por categoria
-    const categories = ['Moradia', 'Alimentação', 'Transporte', 'Lazer', 'Outros'];
+    const categories = ['Água', 'Energia', 'Cartão de Crédito', 'Lazer', 'Gasolina', 'Outros'];
     const data = filteredData || [];
     const totals = categories.map(cat => {
         return data
@@ -358,10 +358,11 @@ function updateChart(filteredData) {
                 label: 'Total Gasto (R$)',
                 data: totals,
                 backgroundColor: [
-                    '#4a90e2', // Moradia
-                    '#2ecc71', // Alimentação
-                    '#e67e22', // Transporte
+                    '#3498db', // Água
+                    '#f1c40f', // Energia
+                    '#e74c3c', // Cartão de Crédito
                     '#9b59b6', // Lazer
+                    '#e67e22', // Gasolina
                     '#95a5a6'  // Outros
                 ],
                 borderRadius: 5
