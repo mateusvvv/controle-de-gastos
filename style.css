@@ -291,6 +291,16 @@ input, select { width: 100%; padding: 10px; margin: 5px 0 10px 0; border: 1px so
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
+/* Estilo discreto para o cabeçalho de Contas Fixas */
+.fixed-group-header {
+    background-color: #f1f5f9 !important;
+    border-left: 4px solid #94a3b8 !important;
+}
+
+.fixed-row {
+    background-color: #fafbfc;
+}
+
 .installments-wrapper-row td {
     padding: 0;
 }

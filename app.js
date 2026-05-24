@@ -455,6 +455,7 @@ async function checkRecurringAndInstallments() {
         if (!alreadyCloned) {
             const newFixedExpense = {
                 ...oldExp,
+                isPaid: false, // Garante que a conta comece como pendente no mês novo
                 date: now.toLocaleDateString('pt-BR'),
                 createdAt: serverTimestamp()
             };
@@ -471,6 +472,13 @@ document.getElementById('quick-add-essentials')?.addEventListener('click', async
 
     if (confirm("Deseja abrir o lançador de contas essenciais para inserir valores?")) {
         openQuickAddModal();
+    }
+});
+
+// Confirmação para limpar o formulário
+document.getElementById('clear-form')?.addEventListener('click', (e) => {
+    if (!confirm("Tem certeza que deseja limpar todos os campos do formulário?")) {
+        e.preventDefault();
     }
 });
 
@@ -701,7 +709,7 @@ function updateCalculationsOnly() {
     reserveEl.style.color = finalReserve >= 0 ? '#1f7a55' : 'var(--danger)';
 
     // Atualiza Barra de Progresso
-    const percent = totalIncome > 0 ? Math.min((totalPaid / totalIncome) * 100, 100) : 0;
+    const percent = totalIncome > 0 ? Math.min((totalCommitted / totalIncome) * 100, 100) : 0;
     const progressBar = document.getElementById('progress-bar');
     progressBar.style.width = percent + '%';
     progressBar.style.backgroundColor = percent > 90 ? 'var(--danger)' : (percent > 70 ? '#e67e22' : 'var(--success)');
@@ -711,9 +719,11 @@ function updateCalculationsOnly() {
 function renderTableAndChart() {
     expensesList.innerHTML = '';
     const filtered = getFilteredExpenses();
-    let totalPaid = 0;
-    let fixedTotal = 0;
-    let variableTotal = 0;
+
+    // Calcula os totais do mês selecionado para atualizar os cards de resumo corretamente
+    const totalPaid = filtered.filter(exp => exp.isPaid).reduce((sum, exp) => sum + (exp.amount || 0), 0);
+    const fixedTotal = filtered.filter(exp => exp.isFixed).reduce((sum, exp) => sum + (exp.amount || 0), 0);
+    const variableTotal = filtered.filter(exp => !exp.isFixed).reduce((sum, exp) => sum + (exp.amount || 0), 0);
 
     const categoryIcons = {
         'Água': '💧',
@@ -727,12 +737,16 @@ function renderTableAndChart() {
         'Outros': '📁'
     };
 
-    // Agrupamento de parcelas
+    // Separação de Gastos Fixos e Variáveis/Parcelados
+    const fixedExpenses = filtered.filter(exp => exp.isFixed);
+    const otherExpenses = filtered.filter(exp => !exp.isFixed);
+
     const groupedExpenses = [];
     const processedGroups = new Set();
     const currentMonthStr = document.getElementById('month-filter').value;
 
-    filtered.forEach(exp => {
+    // Processa apenas gastos que não são fixos mensais (parcelas e avulsos)
+    otherExpenses.forEach(exp => {
         if (exp.groupId && !processedGroups.has(exp.groupId)) {
             const groupItems = expenses.filter(e => e.groupId === exp.groupId);
             groupedExpenses.push({
@@ -751,9 +765,6 @@ function renderTableAndChart() {
 
     groupedExpenses.forEach(item => {
         if (item.type === 'single') {
-            if (item.isPaid) totalPaid += item.amount;
-            if (item.isFixed) fixedTotal += item.amount;
-            else variableTotal += item.amount;
             renderRow(item, expensesList, categoryIcons);
         } else {
             // Renderiza Linha de Resumo do Grupo
@@ -771,10 +782,6 @@ function renderTableAndChart() {
             scrollDiv.className = 'installments-scroll-container';
             
             item.items.forEach(subItem => {
-                if (getExpenseYearMonth(subItem.date) === currentMonthStr) {
-                    if (subItem.isPaid) totalPaid += subItem.amount;
-                    variableTotal += subItem.amount;
-                }
                 renderInstallmentBlock(subItem, scrollDiv);
             });
             
@@ -783,6 +790,32 @@ function renderTableAndChart() {
             expensesList.appendChild(wrapperTr);
         }
     });
+
+    // Renderiza a Seção de Contas Fixas Mensais ao final
+    if (fixedExpenses.length > 0) {
+        const fixedGroupId = 'fixed-monthly-group';
+        const isExpanded = expandedGroups.has(fixedGroupId);
+        
+        const trHeader = document.createElement('tr');
+        trHeader.className = 'group-header-row fixed-group-header';
+        trHeader.innerHTML = `
+            <td colspan="3" style="font-weight: bold; color: #64748b; font-size: 0.8rem; letter-spacing: 0.5px;">
+                📌 CONTAS FIXAS MENSAIS (${fixedExpenses.length})
+            </td>
+            <td colspan="2"></td>
+            <td style="text-align: right;">
+                <button data-group="${fixedGroupId}" class="btn-toggle-group" style="background: transparent; border: none; color: var(--primary); cursor: pointer; text-decoration: underline; font-size: 0.75rem; font-weight: bold;">
+                    ${isExpanded ? 'Ocultar' : 'Ver Detalhes'}
+                </button>
+            </td>
+        `;
+        expensesList.appendChild(trHeader);
+
+        fixedExpenses.forEach(exp => {
+            // Renderiza as linhas das contas fixas com a classe hidden se não estiver expandido
+            renderRow(exp, expensesList, categoryIcons, `fixed-row ${isExpanded ? '' : 'hidden'} installment-row-${fixedGroupId}`);
+        });
+    }
 
     document.getElementById('total-spent').innerText = formatCurrency(totalPaid);
     document.getElementById('fixed-total').innerText = formatCurrency(fixedTotal);
