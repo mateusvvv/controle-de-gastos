@@ -532,17 +532,13 @@ document.getElementById('quick-add-form')?.addEventListener('submit', async (e) 
     const modalDateRaw = modalDateInput.value;
     let dueDay = new Date().getDate();
     let dateStr;
-    const now = new Date();
 
     if (modalDateRaw) {
         const [y, m, d] = modalDateRaw.split('-');
         dateStr = `${d}/${m}/${y}`;
         dueDay = parseInt(d);
     } else {
-        const d = now.getDate().toString().padStart(2, '0');
-        const m = (now.getMonth() + 1).toString().padStart(2, '0');
-        const y = now.getFullYear();
-        dateStr = `${d}/${m}/${y}`;
+        dateStr = new Date().toLocaleDateString('pt-BR');
     }
 
     const description = `Conta de ${category}`; // Descrição padrão para contas essenciais
@@ -567,9 +563,6 @@ document.getElementById('quick-add-form')?.addEventListener('submit', async (e) 
     modalAmountInput.value = '';
     modalDateInput.value = '';
     modalCategorySelect.focus(); // Foca na seleção de categoria para o próximo lançamento
-    
-    // Garante que a seção de contas fixas esteja aberta para mostrar o novo item
-    expandedGroups.add('fixed-monthly-group');
     
     updateUI();
     alert(`Conta de ${category} adicionada com sucesso!`);
