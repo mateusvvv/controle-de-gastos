@@ -391,7 +391,7 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
     .summary .card p { font-size: 0.95rem !important; margin: 2px 0; }
     .summary .card input { padding: 6px; font-size: 13px; }
     
-    .income-card { grid-column: 1 / -1; }
+    .income-card, .debt-card { grid-column: 1 / -1; }
 
     /* Renda em 2 colunas no mobile */
     .income-card.grouped-card { grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -406,6 +406,16 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
         border-top: 1px solid #eef1f4;
         padding-top: 10px;
         text-align: center;
+    }
+
+    /* Ajuste de tamanho de fonte para valores no resumo mobile */
+    #final-reserve,
+    .income-total-value,
+    .fixed-debt-value,
+    .variable-debt-value,
+    .total-spent-value {
+        font-size: 1.05rem;
+        white-space: nowrap;
     }
 
     .progress-card.compact { padding: 10px; }
