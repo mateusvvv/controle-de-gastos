@@ -107,7 +107,7 @@ onAuthStateChanged(auth, async (user) => {
         const querySnapshot = await getDocs(q);
         expenses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        await checkRecurringAndInstallments();
+        await checkRecurringAndInstallments(currentMonth);
         
         // Pequeno atraso para garantir que o DOM e as bibliotecas externas (Chart.js) estejam prontos
         setTimeout(() => {
@@ -255,7 +255,16 @@ walletInput.addEventListener('change', updateUserSettings);
 
 amountInput.addEventListener('input', applyMask);
 
-document.getElementById('month-filter').addEventListener('change', updateUI);
+document.getElementById('month-filter').addEventListener('change', async (e) => {
+    let val = e.target.value;
+    if (!val) {
+        const now = new Date();
+        val = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+        e.target.value = val;
+    }
+    await checkRecurringAndInstallments(val);
+    updateUI();
+});
 
 // Feedback visual para saber se o arquivo foi carregado
 receiptInput.addEventListener('change', (e) => {
@@ -324,7 +333,8 @@ expenseForm.addEventListener('submit', async (e) => {
         if (!editingId && installments > 1) {
             // Lógica de Parcelamento
             const startDate = new Date();
-            const installmentAmount = amount / installments;
+            // Agora o sistema considera o valor digitado como o valor de CADA parcela
+            const installmentAmount = amount;
             for (let i = 0; i < installments; i++) {
                 const futureDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, 15);
                 const newExpenseData = {
@@ -439,16 +449,15 @@ const compressImage = (file, maxWidth = 800, quality = 0.6) => new Promise((reso
     reader.onerror = err => reject(err);
 });
 
-async function checkRecurringAndInstallments() {
-    const now = new Date();
-    const currentMonthStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    
-    // Pega o mês anterior para clonar gastos fixos
-    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+async function checkRecurringAndInstallments(targetMonthStr) {
+    if (!targetMonthStr || !currentUser) return;
+
+    const [year, month] = targetMonthStr.split('-').map(Number);
+    const lastMonthDate = new Date(year, month - 2, 1);
     const lastMonthStr = `${lastMonthDate.getFullYear()}-${(lastMonthDate.getMonth() + 1).toString().padStart(2, '0')}`;
 
     const currentExpenses = expenses.filter(exp => {
-        return getExpenseYearMonth(exp.date) === currentMonthStr;
+        return getExpenseYearMonth(exp.date) === targetMonthStr;
     });
 
     const fixedFromLastMonth = expenses.filter(exp => {
@@ -461,7 +470,7 @@ async function checkRecurringAndInstallments() {
             const newFixedExpense = {
                 ...oldExp,
                 isPaid: false, // Garante que a conta comece como pendente no mês novo
-                date: now.toLocaleDateString('pt-BR'),
+                date: `${(oldExp.dueDay || 1).toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`,
                 createdAt: serverTimestamp()
             };
             delete newFixedExpense.id; 
@@ -618,8 +627,14 @@ function editExpense(id) {
 }
 
 function getFilteredExpenses() {
-    const selectedMonth = document.getElementById('month-filter').value; // Formato YYYY-MM
-    if (!selectedMonth) return expenses;
+    const monthFilter = document.getElementById('month-filter');
+    let selectedMonth = monthFilter.value;
+
+    if (!selectedMonth) {
+        const now = new Date();
+        selectedMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+        monthFilter.value = selectedMonth;
+    }
 
     return expenses.filter(exp => {
         return getExpenseYearMonth(exp.date) === selectedMonth;
@@ -819,7 +834,8 @@ function renderTableAndChart() {
                 totalAmount: groupItems.reduce((sum, item) => sum + item.amount, 0)
             });
             processedGroups.add(exp.groupId);
-        } else if (!exp.groupId) {
+        } else if (!exp.groupId && exp.isFixed) {
+            // Apenas adiciona se for fixo. Gastos '1x' avulsos são ignorados no histórico
             groupedExpenses.push({ type: 'single', ...exp });
         }
     });
@@ -843,7 +859,10 @@ function renderTableAndChart() {
             scrollDiv.className = 'installments-scroll-container';
             
             item.items.forEach(subItem => {
-                renderInstallmentBlock(subItem, scrollDiv);
+                // Filtra para não repetir no histórico a parcela que já está sendo exibida no cabeçalho (mês atual)
+                if (getExpenseYearMonth(subItem.date) !== currentMonthStr) {
+                    renderInstallmentBlock(subItem, scrollDiv);
+                }
             });
             
             wrapperTd.appendChild(scrollDiv);
@@ -899,7 +918,7 @@ function renderRow(exp, container, icons, extraClass = '') {
             </div>
         </td>
         <td style="display: flex; align-items: center; gap: 8px;"><span>${icon}</span> ${exp.category}</td>
-        <td>${exp.isFixed ? `<span class="badge-fixed">Fixa Mensal ${exp.dueDay ? `(Paga todo dia ${exp.dueDay} do início do mês)` : ''}</span>` : '<span class="badge-once">1x</span>'}</td>
+        <td>${exp.isFixed ? `<span class="badge-fixed">Fixa Mensal ${exp.dueDay ? `(Paga todo dia ${exp.dueDay} do início do mês)` : ''}</span>` : ''}</td>
         <td>${formatCurrency(exp.amount || 0)}</td>
         <td>${exp.receipt ? `<a href="${exp.receipt}" target="_blank">Ver</a>` : '-'}</td>
         <td style="display: flex; gap: 3px; justify-content: flex-end;">
@@ -936,17 +955,29 @@ function renderGroupSummary(group, container, icons, currentMonth) {
     const totalCount = group.items.length;
     const isExpanded = expandedGroups.has(group.groupId);
 
+    // Encontra a parcela específica do mês selecionado para controle direto no cabeçalho
+    const currentInst = group.items.find(item => getExpenseYearMonth(item.date) === currentMonth);
+
     const tr = document.createElement('tr');
     tr.className = 'group-header-row';
     tr.innerHTML = `
-        <td style="font-weight: bold;">📦 ${group.baseDescription} (Parcelado)</td>
+        <td style="font-weight: bold;">
+            <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                <span>📦 ${group.baseDescription} (Parcelado)</span>
+                ${currentInst ? `<span style="font-size: 0.75rem; color: #7f8c8d; font-weight: normal;">Parcela de: ${currentInst.date}</span>` : ''}
+            </div>
+        </td>
         <td><span>${icon}</span> ${group.category}</td>
-        <td><span class="badge-once">${paidCount}/${totalCount} Pagas</span></td>
+        <td>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                <span class="badge-once">${paidCount}/${totalCount} Pagas</span>
+            </div>
+        </td>
         <td>${formatCurrency(group.totalAmount)}</td>
-        <td>-</td>
+        <td>${currentInst && currentInst.receipt ? `<a href="${currentInst.receipt}" target="_blank">Ver</a>` : '-'}</td>
         <td style="text-align: right;">
             <div style="display: flex; gap: 3px; justify-content: flex-end;">
-                <button data-group="${group.groupId}" class="btn-toggle-group btn-primary" style="padding: 5px 10px;">${isExpanded ? 'Ocultar todas as parcelas' : 'Todas as parcelas'}</button>
+                <button data-group="${group.groupId}" class="btn-toggle-group btn-primary" style="padding: 5px 10px;">${isExpanded ? 'Ocultar Histórico' : 'Histórico Completo'}</button>
                 <button data-group="${group.groupId}" class="btn-delete-group btn-danger" title="Excluir todas as parcelas">X</button>
             </div>
         </td>

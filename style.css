@@ -247,6 +247,15 @@ canvas#expenseChart {
 
 input, select { width: 100%; padding: 10px; margin: 5px 0 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
 
+/* Remove o botão nativo de 'limpar' (x) dos campos de data e mês para evitar reset acidental */
+input[type="date"]::-webkit-clear-button,
+input[type="month"]::-webkit-clear-button,
+input[type="month"]::-webkit-inner-spin-button {
+    display: none;
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 .installments-row {
     display: flex;
     align-items: center;
