@@ -21,6 +21,7 @@
                     <button id="menu-btn" class="btn-primary">Menu</button>
                     <div id="dropdown-menu" class="dropdown-content">
                         <a href="#" id="menu-home">Início</a>
+                        <a href="#" id="menu-chart">Mostrar Gráfico</a>
                         <a href="#" id="menu-history" class="hidden">Histórico de Gastos</a>
                         <hr>
                         <a href="#" id="logout-btn" style="color: var(--danger);">Sair</a>
@@ -93,16 +94,6 @@
                 <p id="progress-text">0% do salário utilizado</p>
             </div>
 
-            <div class="charts">
-            <div class="card">
-                <h3>Distribuição por Categoria</h3>
-                <div class="chart-wrapper">
-                    <canvas id="expenseChart" width="900" height="300"></canvas>
-                    <p id="chart-empty-message" class="chart-empty-message hidden">Sem gastos neste período</p>
-                </div>
-            </div>
-            </div>
-
             <div class="actions">
             <div class="card">
                 <h3>Adicionar Gasto</h3>
@@ -131,6 +122,18 @@
                     <button type="submit" class="btn-success">Adicionar</button>
                 </form>
             </div>
+            </div>
+        </section>
+
+        <section id="section-chart" class="view-section hidden">
+            <div class="charts">
+                <div class="card">
+                    <h3>Análise de Gastos por Categoria</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="expenseChart" width="900" height="400"></canvas>
+                        <p id="chart-empty-message" class="chart-empty-message hidden">Sem gastos cadastrados para este período.</p>
+                    </div>
+                </div>
             </div>
         </section>
 

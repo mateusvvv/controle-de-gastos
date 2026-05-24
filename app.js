@@ -92,7 +92,11 @@ onAuthStateChanged(auth, async (user) => {
         expenses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         await checkRecurringAndInstallments();
-        updateUI();
+        
+        // Pequeno atraso para garantir que o DOM e as bibliotecas externas (Chart.js) estejam prontos
+        setTimeout(() => {
+            updateUI();
+        }, 100);
     }
 });
 
@@ -305,7 +309,14 @@ function getFilteredExpenses() {
 
 function updateChart(filteredData) {
     const canvas = document.getElementById('expenseChart');
-    if (!canvas || typeof Chart === 'undefined') return;
+    
+    // Se a biblioteca Chart.js ainda não carregou, tenta novamente em breve
+    if (typeof Chart === 'undefined') {
+        setTimeout(() => updateChart(filteredData), 200);
+        return;
+    }
+
+    if (!canvas) return;
 
     if (expenseChart) {
         expenseChart.destroy();

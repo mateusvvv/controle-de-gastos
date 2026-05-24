@@ -66,8 +66,21 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
 /* Utilitários */
 .hidden { display: none !important; }
 
-.auth-page { display: flex; justify-content: center; align-items: center; height: 100vh; }
+#section-chart, #section-home {
+    min-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.auth-page { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #ecf0f1; margin: 0; }
 .login-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 350px; }
+.login-container h2 { text-align: center; color: #2c3e50; margin-top: 0; margin-bottom: 10px; }
+.login-container p { text-align: center; color: #7f8c8d; margin-bottom: 25px; font-size: 0.95rem; }
+.login-container label { display: block; margin-bottom: 5px; color: #34495e; font-weight: 600; font-size: 0.9rem; }
+.login-container .btn-primary { width: 100%; padding: 12px; font-weight: bold; margin-top: 10px; font-size: 1rem; }
+
+#error-message { text-align: center; margin-top: 15px; font-weight: 500; }
 
 .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 30px; }
 .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -153,16 +166,21 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
 /* Botão de Resumo */
 .btn-summary-toggle {
     width: 100%;
-    background: #fff;
-    border: 1px solid #ddd;
-    padding: 12px;
+    background: var(--white);
+    border: 1px solid #d1d8e0;
+    padding: 14px;
     border-radius: 8px;
     margin-bottom: 15px;
     cursor: pointer;
     font-weight: bold;
-    color: #2c3e50;
-    transition: all 0.3s ease;
+    color: #34495e;
+    font-size: 0.95rem;
+    transition: background 0.2s, transform 0.1s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
+.btn-summary-toggle:hover { background: #f8fafc; }
+.btn-summary-toggle:active { transform: translateY(1px); }
+
 .hidden-summary { display: none !important; }
 
 .charts { margin-bottom: 30px; }
@@ -173,15 +191,15 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
 }
 .chart-wrapper {
     position: relative;
-    height: 300px;
-    min-height: 300px;
+    height: 400px;
+    min-height: 400px;
     width: 100%;
 }
 canvas#expenseChart {
     display: block;
     height: 100% !important;
     width: 100% !important;
-    min-height: 300px;
+    min-height: 400px;
 }
 .chart-empty-message {
     position: absolute;

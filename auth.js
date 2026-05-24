@@ -44,6 +44,7 @@ document.addEventListener('click', (e) => {
     const dropdownMenu = document.getElementById('dropdown-menu') || document.querySelector('.dropdown-content');
     const sectionHome = document.getElementById('section-home');
     const sectionHistory = document.getElementById('section-history');
+    const sectionChart = document.getElementById('section-chart');
     const menuBtn = e.target.closest('#menu-btn');
 
     // Abrir/Fechar o Menu
@@ -62,8 +63,21 @@ document.addEventListener('click', (e) => {
     if (e.target.id === 'menu-home') {
         e.preventDefault();
         sectionHome?.classList.remove('hidden');
+        sectionChart?.classList.add('hidden');
         sectionHistory?.classList.add('hidden');
         dropdownMenu?.classList.remove('show');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (typeof window.updateUI === 'function') window.updateUI();
+    }
+
+    // Navegação: Seção do Gráfico
+    if (e.target.id === 'menu-chart') {
+        e.preventDefault();
+        sectionHome?.classList.add('hidden');
+        sectionChart?.classList.remove('hidden');
+        sectionHistory?.classList.add('hidden');
+        dropdownMenu?.classList.remove('show');
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
         if (typeof window.updateUI === 'function') window.updateUI();
     }
@@ -75,6 +89,7 @@ document.addEventListener('click', (e) => {
             document.getElementById('admin-modal').style.display = 'none';
         }
         sectionHome?.classList.add('hidden');
+        sectionChart?.classList.add('hidden');
         sectionHistory?.classList.remove('hidden');
         dropdownMenu?.classList.remove('show');
         if (typeof window.updateUI === 'function') window.updateUI();
