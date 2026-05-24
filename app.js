@@ -203,6 +203,13 @@ document.getElementById('toggle-summary-btn').addEventListener('click', function
     this.innerText = summaryGrid.classList.contains('hidden-summary') ? '📊 Ver Resumo Financeiro' : '🔼 Ocultar Resumo';
 });
 
+// Controle do Painel de Uso da Renda
+document.getElementById('toggle-usage-btn')?.addEventListener('click', function() {
+    const details = document.getElementById('usage-details');
+    details.classList.toggle('hidden');
+    this.innerText = details.classList.contains('hidden') ? '📊 Ver Uso da Renda' : '🔼 Ocultar Uso da Renda';
+});
+
 async function updateUserSettings() {
     if (!currentUser) return;
     await setDoc(doc(db, "users", currentUser.uid), {
@@ -714,6 +721,20 @@ function updateCalculationsOnly() {
     progressBar.style.width = percent + '%';
     progressBar.style.backgroundColor = percent > 90 ? 'var(--danger)' : (percent > 70 ? '#e67e22' : 'var(--success)');
     document.getElementById('progress-text').innerText = `${percent.toFixed(1)}% do salário utilizado`;
+
+    // Atualiza Barra de Meta de Economia (Baseado no Saldo na Carteira)
+    const goalStatus = document.getElementById('goal-status');
+    const goalBar = document.getElementById('goal-bar');
+
+    if (savingsGoal > 0) {
+        const goalPercent = Math.min(Math.max((walletValue / savingsGoal) * 100, 0), 100);
+        goalBar.style.width = goalPercent + '%';
+        goalBar.style.backgroundColor = goalPercent >= 100 ? 'var(--success)' : 'var(--primary)';
+        goalStatus.innerText = goalPercent >= 100 ? "Meta alcançada!" : `${goalPercent.toFixed(0)}% da meta`;
+    } else {
+        goalBar.style.width = '0%';
+        goalStatus.innerText = "Sem meta definida";
+    }
 }
 
 function renderTableAndChart() {
@@ -822,22 +843,7 @@ function renderTableAndChart() {
     document.getElementById('variable-total').innerText = formatCurrency(variableTotal);
 
     // Lógica da Meta de Economia
-    const totalIncome = budget + extraIncome;
-    const finalReserve = budget - totalPaid;
-    const totalIncomeAvailable = totalIncome - totalPaid; // Disponibilidade real total
-    const goalStatus = document.getElementById('goal-status');
-    const goalBar = document.getElementById('goal-bar');
-
-    if (savingsGoal > 0) {
-        const goalPercent = Math.min(Math.max((totalIncomeAvailable / savingsGoal) * 100, 0), 100);
-        goalBar.style.width = goalPercent + '%';
-        goalBar.style.backgroundColor = goalPercent >= 100 ? 'var(--success)' : 'var(--primary)';
-        goalStatus.innerText = goalPercent >= 100 ? "Meta alcançada!" : `${goalPercent.toFixed(0)}% da meta`;
-    } else {
-        goalBar.style.width = '0%';
-        goalStatus.innerText = "Sem meta definida";
-    }
-
+    updateCalculationsOnly();
     updateChart(filtered);
 }
 
