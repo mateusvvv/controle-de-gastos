@@ -14,6 +14,8 @@ let extraIncomeDate = "";
 let expenseChart = null;
 let editingId = null;
 let currentUser = null;
+let updateTimeout = null;
+let expandedGroups = new Set(); // Rastreia quais grupos de parcelas estão visíveis
 
 const expenseForm = document.getElementById('expense-form');
 const budgetInput = document.getElementById('monthly-budget');
@@ -24,6 +26,8 @@ const savingsGoalInput = document.getElementById('savings-goal');
 const walletInput = document.getElementById('wallet-value');
 const expensesList = document.getElementById('expenses-list');
 const amountInput = document.getElementById('amount');
+const receiptInput = document.getElementById('receipt');
+const fileNameDisplay = document.getElementById('file-name-display');
 const categorySelect = document.getElementById('category');
 const otherCategoryInput = document.getElementById('other-category');
 
@@ -37,12 +41,12 @@ const formatCurrency = (value) => {
 
 const parseCurrency = (value) => {
     if (typeof value === 'number') return value;
-    return parseFloat(value.replace(/\D/g, "")) / 100 || 0;
+    return parseFloat(value.replace(/\D/g, "")) || 0;
 };
 
 const applyMask = (e) => {
     let value = e.target.value.replace(/\D/g, "");
-    value = (value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    value = value ? parseInt(value, 10).toLocaleString('pt-BR') : "";
     e.target.value = value ? "R$ " + value : "";
 };
 
@@ -74,10 +78,10 @@ onAuthStateChanged(auth, async (user) => {
             salaryDate = data.salaryDate || "";
             extraIncomeDate = data.extraIncomeDate || "";
             
-            budgetInput.value = budget > 0 ? formatCurrency(budget) : "";
-            extraIncomeInput.value = extraIncome > 0 ? formatCurrency(extraIncome) : "";
-            savingsGoalInput.value = savingsGoal > 0 ? formatCurrency(savingsGoal) : "";
-            walletInput.value = walletValue > 0 ? formatCurrency(walletValue) : "";
+            budgetInput.value = budget > 0 ? "R$ " + budget.toLocaleString('pt-BR') : "";
+            extraIncomeInput.value = extraIncome > 0 ? "R$ " + extraIncome.toLocaleString('pt-BR') : "";
+            savingsGoalInput.value = savingsGoal > 0 ? "R$ " + savingsGoal.toLocaleString('pt-BR') : "";
+            walletInput.value = walletValue > 0 ? "R$ " + walletValue.toLocaleString('pt-BR') : "";
             salaryDateInput.value = salaryDate;
             extraIncomeDateInput.value = extraIncomeDate;
         }
@@ -102,6 +106,75 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
+// Delegação de Eventos para a Tabela (Resolve os botões que não funcionam)
+expensesList.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    const id = btn.getAttribute('data-id');
+    const groupId = btn.getAttribute('data-group');
+
+    if (btn.classList.contains('btn-edit')) {
+        editExpense(id);
+    } else if (btn.classList.contains('btn-delete')) {
+        deleteExpense(id);
+    } else if (btn.classList.contains('btn-paid')) {
+        togglePaidStatus(id);
+    } else if (btn.classList.contains('btn-delete-group')) {
+        deleteExpenseGroup(groupId);
+    } else if (btn.classList.contains('btn-toggle-group')) {
+        toggleInstallments(groupId);
+    }
+});
+
+// Funções para os botões da tabela (Corrigindo o que não funcionava)
+async function togglePaidStatus(id) {
+    if (!confirm("Deseja alterar o status de pagamento deste gasto?")) return;
+    const exp = expenses.find(e => e.id === id);
+    if (!exp || !currentUser) return;
+    const newStatus = !exp.isPaid;
+    await updateDoc(doc(db, "users", currentUser.uid, "expenses", id), { isPaid: newStatus });
+    exp.isPaid = newStatus;
+    updateUI();
+}
+
+async function deleteExpenseGroup(groupId) {
+    if (!confirm("Deseja realmente excluir todas as parcelas deste grupo?")) return;
+    if (currentUser) {
+        const groupItems = expenses.filter(e => e.groupId === groupId);
+        const deletePromises = groupItems.map(item => 
+            deleteDoc(doc(db, "users", currentUser.uid, "expenses", item.id))
+        );
+        await Promise.all(deletePromises);
+        expenses = expenses.filter(e => e.groupId !== groupId);
+        updateUI();
+    }
+}
+
+function toggleInstallments(groupId) {
+    const rows = document.querySelectorAll(`.installment-row-${groupId}`);
+    const btn = document.querySelector(`button[data-group="${groupId}"].btn-toggle-group`);
+    
+    if (rows.length > 0) {
+        const isOpening = rows[0].classList.contains('hidden');
+        if (isOpening) {
+            expandedGroups.add(groupId);
+            if (btn) btn.innerText = 'Ocultar todas as parcelas';
+        } else {
+            expandedGroups.delete(groupId);
+            if (btn) btn.innerText = 'Todas as parcelas';
+        }
+        rows.forEach(row => row.classList.toggle('hidden'));
+    }
+}
+
+// Lógica para mostrar/esconder campo de dia de vencimento
+document.getElementById('is-fixed').addEventListener('change', function() {
+    const container = document.getElementById('fixed-day-container');
+    if (this.checked) container.classList.remove('hidden');
+    else container.classList.add('hidden');
+});
+
 // Controle do Painel de Resumo
 document.getElementById('toggle-summary-btn').addEventListener('click', function() {
     const summaryGrid = document.getElementById('summary-grid');
@@ -119,14 +192,14 @@ async function updateUserSettings() {
 budgetInput.addEventListener('input', (e) => {
     applyMask(e);
     budget = parseCurrency(e.target.value);
-    updateUI();
+    updateCalculationsOnly();
 });
 budgetInput.addEventListener('change', updateUserSettings);
 
 extraIncomeInput.addEventListener('input', (e) => {
     applyMask(e);
     extraIncome = parseCurrency(e.target.value);
-    updateUI();
+    updateCalculationsOnly();
 });
 extraIncomeInput.addEventListener('change', updateUserSettings);
 
@@ -143,20 +216,31 @@ extraIncomeDateInput.addEventListener('change', (e) => {
 savingsGoalInput.addEventListener('input', (e) => {
     applyMask(e);
     savingsGoal = parseCurrency(e.target.value);
-    updateUI();
+    updateCalculationsOnly();
 });
 savingsGoalInput.addEventListener('change', updateUserSettings);
 
 walletInput.addEventListener('input', (e) => {
     applyMask(e);
     walletValue = parseCurrency(e.target.value);
-    updateUI();
+    updateCalculationsOnly();
 });
 walletInput.addEventListener('change', updateUserSettings);
 
 amountInput.addEventListener('input', applyMask);
 
 document.getElementById('month-filter').addEventListener('change', updateUI);
+
+// Feedback visual para saber se o arquivo foi carregado
+receiptInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        fileNameDisplay.innerText = `📎 ${e.target.files[0].name}`;
+        fileNameDisplay.style.color = 'var(--primary)';
+    } else {
+        fileNameDisplay.innerText = 'Nenhum arquivo selecionado';
+        fileNameDisplay.style.color = '#7f8c8d';
+    }
+});
 
 // Mostrar/Esconder campo de categoria personalizada
 categorySelect.addEventListener('change', (e) => {
@@ -173,75 +257,120 @@ expenseForm.addEventListener('submit', async (e) => {
     const fileInput = document.getElementById('receipt');
     let receiptData = null;
 
-    if (fileInput.files.length > 0) {
-        receiptData = await toBase64(fileInput.files[0]);
+    if (!currentUser) {
+        alert("Sessão expirada. Por favor, faça login novamente.");
+        return;
     }
 
-    const installments = parseInt(document.getElementById('installments').value) || 1;
-    const description = document.getElementById('desc').value;
-    const amount = parseCurrency(document.getElementById('amount').value);
-    
-    let category = categorySelect.value;
-    if (category === 'Outros' && otherCategoryInput.value.trim() !== '') {
-        category = otherCategoryInput.value.trim();
-    }
+    const submitBtn = expenseForm.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerText;
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Salvando...";
 
-    const isFixed = document.getElementById('is-fixed').checked;
+    try {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            if (file.type.startsWith('image/')) {
+                // Comprime imagens para caber no limite de 1MB do Firestore
+                receiptData = await compressImage(file);
+            } else {
+                if (file.size > 750 * 1024) {
+                    alert("PDF muito grande. O limite para PDFs no banco de dados é de 750KB. Tente um arquivo menor ou envie uma foto/print.");
+                    return;
+                }
+                receiptData = await toBase64(file);
+            }
+        }
 
-    if (!editingId && installments > 1) {
-        // Lógica de Parcelamento
-        const startDate = new Date();
-        const installmentAmount = amount / installments;
-        for (let i = 0; i < installments; i++) {
-            const futureDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, 15);
-            const newExpenseData = {
-                description: `${description} (${i + 1}/${installments})`,
-                amount: installmentAmount,
+        const installments = parseInt(document.getElementById('installments').value) || 1;
+        const description = document.getElementById('desc').value;
+        const amount = parseCurrency(document.getElementById('amount').value);
+        const dueDay = parseInt(document.getElementById('due-day').value) || new Date().getDate();
+        const groupId = Date.now().toString(); // Identificador para agrupar as parcelas
+        
+        let category = categorySelect.value;
+        if (category === 'Outros' && otherCategoryInput.value.trim() !== '') {
+            category = otherCategoryInput.value.trim();
+        }
+
+        const isFixed = document.getElementById('is-fixed').checked;
+
+        if (!editingId && installments > 1) {
+            // Lógica de Parcelamento
+            const startDate = new Date();
+            const installmentAmount = amount / installments;
+            for (let i = 0; i < installments; i++) {
+                const futureDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, 15);
+                const newExpenseData = {
+                    description: `${description} (${i + 1}/${installments})`,
+                    amount: installmentAmount,
+                    category: category,
+                    isFixed: false,
+                    isPaid: false,
+                    groupId: groupId,
+                    date: `${dueDay.toString().padStart(2, '0')}/${(futureDate.getMonth() + 1).toString().padStart(2, '0')}/${futureDate.getFullYear()}`,
+                receipt: receiptData || null,
+                    createdAt: serverTimestamp()
+                };
+                const docRef = await addDoc(collection(db, "users", currentUser.uid, "expenses"), newExpenseData);
+                expenses.push({ id: docRef.id, ...newExpenseData });
+            }
+        
+        // Limpeza após salvar parcelas
+        expenseForm.reset();
+        if (fileNameDisplay) fileNameDisplay.innerText = 'Nenhum arquivo selecionado';
+        otherCategoryInput.classList.add('hidden');
+        updateUI();
+        }
+
+        else if (editingId) {
+            const updatedData = {
+                description: description,
+                amount: amount,
                 category: category,
-                isFixed: false,
-                date: futureDate.toLocaleDateString('pt-BR'),
-                receipt: receiptData,
+                receipt: receiptData || expenses.find(e => e.id === editingId)?.receipt || null,
+                isFixed: isFixed
+            };
+            await updateDoc(doc(db, "users", currentUser.uid, "expenses", editingId), updatedData);
+            const index = expenses.findIndex(exp => exp.id === editingId);
+            if (index !== -1) expenses[index] = { ...expenses[index], ...updatedData };
+            
+            editingId = null;
+            expenseForm.querySelector('button[type="submit"]').innerText = 'Adicionar';
+        } else {
+            const dueDay = parseInt(document.getElementById('due-day').value);
+            const now = new Date();
+            const dateStr = isFixed && dueDay ? 
+                `${dueDay.toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}` : 
+                now.toLocaleDateString('pt-BR');
+
+            const newExpenseData = {
+                description: description,
+                amount: amount,
+                category: category,
+                isFixed: isFixed,
+                dueDay: isFixed ? dueDay : null,
+                isPaid: false,
+                date: dateStr,
+                receipt: receiptData || null,
                 createdAt: serverTimestamp()
             };
             const docRef = await addDoc(collection(db, "users", currentUser.uid, "expenses"), newExpenseData);
             expenses.push({ id: docRef.id, ...newExpenseData });
         }
-        updateUI();
+
+        // Limpeza após salvar gasto único
         expenseForm.reset();
-        return;
+        if (fileNameDisplay) fileNameDisplay.innerText = 'Nenhum arquivo selecionado';
+        otherCategoryInput.classList.add('hidden');
+        updateUI();
+    } catch (error) {
+        console.error("Erro ao salvar gasto:", error);
+        alert("Ocorreu um erro ao salvar: " + error.message);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalBtnText;
     }
-
-    if (editingId) {
-        const updatedData = {
-            description: description,
-            amount: amount,
-            category: category,
-            receipt: receiptData || expenses.find(e => e.id === editingId).receipt,
-            isFixed: isFixed
-        };
-        await updateDoc(doc(db, "users", currentUser.uid, "expenses", editingId), updatedData);
-        const index = expenses.findIndex(exp => exp.id === editingId);
-        if (index !== -1) expenses[index] = { ...expenses[index], ...updatedData };
-        
-        editingId = null;
-        expenseForm.querySelector('button[type="submit"]').innerText = 'Adicionar';
-    } else {
-        const newExpenseData = {
-            description: document.getElementById('desc').value,
-            amount: parseCurrency(document.getElementById('amount').value),
-            category: document.getElementById('category').value,
-            isFixed: document.getElementById('is-fixed').checked,
-            date: new Date().toLocaleDateString('pt-BR'),
-            receipt: receiptData,
-            createdAt: serverTimestamp()
-        };
-        const docRef = await addDoc(collection(db, "users", currentUser.uid, "expenses"), newExpenseData);
-        expenses.push({ id: docRef.id, ...newExpenseData });
-    }
-
-    updateUI();
-    expenseForm.reset();
-    otherCategoryInput.classList.add('hidden');
 });
 
 const toBase64 = file => new Promise((resolve, reject) => {
@@ -249,6 +378,34 @@ const toBase64 = file => new Promise((resolve, reject) => {
     reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result);
     reader.onerror = error => reject(error);
+});
+
+const compressImage = (file, maxWidth = 800, quality = 0.6) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Converte para JPEG com qualidade reduzida para economizar espaço
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = e.target.result;
+    };
+    reader.onerror = err => reject(err);
 });
 
 async function checkRecurringAndInstallments() {
@@ -283,9 +440,12 @@ async function checkRecurringAndInstallments() {
 }
 
 async function deleteExpense(id) {
+    if (!confirm("Deseja realmente excluir este gasto?")) return;
+    
     if (editingId === id) {
         editingId = null;
         expenseForm.reset();
+        fileNameDisplay.innerText = 'Nenhum arquivo selecionado';
         expenseForm.querySelector('button[type="submit"]').innerText = 'Adicionar';
     }
     
@@ -306,7 +466,7 @@ function editExpense(id) {
     if (!exp) return;
 
     document.getElementById('desc').value = exp.description;
-    document.getElementById('amount').value = formatCurrency(exp.amount);
+    document.getElementById('amount').value = "R$ " + Math.floor(exp.amount).toLocaleString('pt-BR');
     
     // Lógica para carregar categoria personalizada na edição
     const optionExists = Array.from(categorySelect.options).some(opt => opt.value === exp.category);
@@ -358,7 +518,7 @@ function updateChart(filteredData) {
     const data = filteredData || [];
     const totals = categories.map(cat => {
         return data
-            .filter(exp => exp.category === cat)
+            .filter(exp => exp.category === cat && exp.isPaid)
             .reduce((sum, exp) => sum + (exp.amount || 0), 0);
     });
 
@@ -418,45 +578,20 @@ function updateChart(filteredData) {
 }
 
 function updateUI() {
-    expensesList.innerHTML = '';
+    // Limpa o timeout anterior para evitar múltiplas atualizações pesadas
+    if (updateTimeout) clearTimeout(updateTimeout);
+    
+    updateCalculationsOnly();
+
+    // Agenda a atualização pesada (tabela e gráfico) para 300ms depois
+    updateTimeout = setTimeout(() => {
+        renderTableAndChart();
+    }, 300);
+}
+
+function updateCalculationsOnly() {
     const filtered = getFilteredExpenses();
-    let totalSpent = 0;
-    let fixedTotal = 0;
-    let variableTotal = 0;
-
-    const categoryIcons = {
-        'Água': '💧',
-        'Energia': '⚡',
-        'Cartão de Crédito': '💳',
-        'Lazer': '🎡',
-        'Gasolina': '⛽',
-        'Outros': '📁'
-    };
-
-    filtered.forEach(exp => {
-        totalSpent += exp.amount;
-        if (exp.isFixed) fixedTotal += exp.amount;
-        else variableTotal += exp.amount;
-
-        const icon = categoryIcons[exp.category] || '❓';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${exp.description}</td>
-            <td style="display: flex; align-items: center; gap: 8px;"><span>${icon}</span> ${exp.category}</td>
-            <td>${exp.isFixed ? '<span class="badge-fixed">Fixa</span>' : '<span class="badge-once">1x</span>'}</td>
-            <td>${formatCurrency(exp.amount || 0)}</td>
-            <td>${exp.receipt ? `<a href="${exp.receipt}" target="_blank">Ver</a>` : '-'}</td>
-            <td>
-                <button onclick="editExpense('${exp.id}')" class="btn-primary" style="padding: 5px 10px; margin-right: 5px;">Editar</button>
-                <button onclick="deleteExpense('${exp.id}')" class="btn-danger">X</button>
-            </td>
-        `;
-        expensesList.appendChild(tr);
-    });
-
-    document.getElementById('total-spent').innerText = formatCurrency(totalSpent);
-    document.getElementById('fixed-total').innerText = formatCurrency(fixedTotal);
-    document.getElementById('variable-total').innerText = formatCurrency(variableTotal);
+    let totalSpent = filtered.filter(exp => exp.isPaid).reduce((sum, exp) => sum + exp.amount, 0);
     
     // Renda Total
     const totalIncome = budget + extraIncome;
@@ -469,12 +604,85 @@ function updateUI() {
     const finalReserve = availableAfterExpenses - walletValue - savingsGoal;
     const reserveEl = document.getElementById('final-reserve');
     reserveEl.innerText = formatCurrency(finalReserve);
-    reserveEl.style.color = finalReserve >= 0 ? '#2c3e50' : 'var(--danger)';
+    reserveEl.style.color = finalReserve >= 0 ? '#1f7a55' : 'var(--danger)';
+
+    // Atualiza Barra de Progresso
+    const percent = totalIncome > 0 ? Math.min((totalSpent / totalIncome) * 100, 100) : 0;
+    const progressBar = document.getElementById('progress-bar');
+    progressBar.style.width = percent + '%';
+    progressBar.style.backgroundColor = percent > 90 ? 'var(--danger)' : (percent > 70 ? '#e67e22' : 'var(--success)');
+    document.getElementById('progress-text').innerText = `${percent.toFixed(1)}% do salário utilizado`;
+}
+
+function renderTableAndChart() {
+    expensesList.innerHTML = '';
+    const filtered = getFilteredExpenses();
+    let totalPaid = 0;
+    let fixedTotal = 0;
+    let variableTotal = 0;
+
+    const categoryIcons = {
+        'Água': '💧',
+        'Energia': '⚡',
+        'Cartão de Crédito': '💳',
+        'Lazer': '🎡',
+        'Gasolina': '⛽',
+        'Outros': '📁'
+    };
+
+    // Agrupamento de parcelas
+    const groupedExpenses = [];
+    const processedGroups = new Set();
+    const currentMonthStr = document.getElementById('month-filter').value;
+
+    filtered.forEach(exp => {
+        if (exp.groupId && !processedGroups.has(exp.groupId)) {
+            const groupItems = expenses.filter(e => e.groupId === exp.groupId);
+            groupedExpenses.push({
+                type: 'group',
+                groupId: exp.groupId,
+                category: exp.category,
+                baseDescription: exp.description.split(' (')[0],
+                items: groupItems,
+                totalAmount: groupItems.reduce((sum, item) => sum + item.amount, 0)
+            });
+            processedGroups.add(exp.groupId);
+        } else if (!exp.groupId) {
+            groupedExpenses.push({ type: 'single', ...exp });
+        }
+    });
+
+    groupedExpenses.forEach(item => {
+        if (item.type === 'single') {
+            if (item.isPaid) totalPaid += item.amount;
+            if (item.isFixed) fixedTotal += item.amount;
+            else variableTotal += item.amount;
+            renderRow(item, expensesList, categoryIcons);
+        } else {
+            // Renderiza Linha de Resumo do Grupo
+            renderGroupSummary(item, expensesList, categoryIcons, currentMonthStr);
+            
+            const isExpanded = expandedGroups.has(item.groupId);
+            item.items.forEach(subItem => {
+                if (getExpenseYearMonth(subItem.date) === currentMonthStr) {
+                    if (subItem.isPaid) totalPaid += subItem.amount;
+                    variableTotal += subItem.amount;
+                }
+                renderRow(subItem, expensesList, categoryIcons, `installment-row-${item.groupId} ${isExpanded ? '' : 'hidden'} sub-row`);
+            });
+        }
+    });
+
+    document.getElementById('total-spent').innerText = formatCurrency(totalPaid);
+    document.getElementById('fixed-total').innerText = formatCurrency(fixedTotal);
+    document.getElementById('variable-total').innerText = formatCurrency(variableTotal);
 
     // Lógica da Meta de Economia
+    const totalIncome = budget + extraIncome;
+    const availableAfterExpenses = totalIncome - totalPaid;
     const goalStatus = document.getElementById('goal-status');
     const goalBar = document.getElementById('goal-bar');
-    
+
     if (savingsGoal > 0) {
         const goalPercent = Math.min(Math.max((availableAfterExpenses / savingsGoal) * 100, 0), 100);
         goalBar.style.width = goalPercent + '%';
@@ -485,14 +693,49 @@ function updateUI() {
         goalStatus.innerText = "Sem meta definida";
     }
 
-    // Atualiza Barra de Progresso
-    const percent = totalIncome > 0 ? Math.min((totalSpent / totalIncome) * 100, 100) : 0;
-    const progressBar = document.getElementById('progress-bar');
-    progressBar.style.width = percent + '%';
-    progressBar.style.backgroundColor = percent > 90 ? 'var(--danger)' : (percent > 70 ? '#e67e22' : 'var(--success)');
-    document.getElementById('progress-text').innerText = `${percent.toFixed(1)}% do salário utilizado`;
-
     updateChart(filtered);
+}
+
+function renderRow(exp, container, icons, extraClass = '') {
+    const icon = icons[exp.category] || '';
+    const tr = document.createElement('tr');
+    if (extraClass) tr.className = extraClass;
+    tr.innerHTML = `
+        <td>${exp.description}</td>
+        <td style="display: flex; align-items: center; gap: 8px;"><span>${icon}</span> ${exp.category}</td>
+        <td>${exp.isFixed ? '<span class="badge-fixed">Fixa</span>' : '<span class="badge-once">1x</span>'}</td>
+        <td>${formatCurrency(exp.amount || 0)}</td>
+        <td>${exp.receipt ? `<a href="${exp.receipt}" target="_blank">Ver</a>` : '-'}</td>
+        <td style="display: flex; gap: 5px;">
+            <button data-id="${exp.id}" class="btn-paid ${exp.isPaid ? 'paid' : ''}" title="Alternar Status">${exp.isPaid ? '✅' : '⏳'}</button>
+            <button data-id="${exp.id}" class="btn-delete btn-danger">X</button>
+        </td>
+    `;
+    container.appendChild(tr);
+}
+
+function renderGroupSummary(group, container, icons, currentMonth) {
+    const icon = icons[group.category] || '';
+    const paidCount = group.items.filter(i => i.isPaid).length;
+    const totalCount = group.items.length;
+    const isExpanded = expandedGroups.has(group.groupId);
+
+    const tr = document.createElement('tr');
+    tr.className = 'group-header-row';
+    tr.innerHTML = `
+        <td style="font-weight: bold;">📦 ${group.baseDescription} (Parcelado)</td>
+        <td><span>${icon}</span> ${group.category}</td>
+        <td><span class="badge-once">${paidCount}/${totalCount} Pagas</span></td>
+        <td>${formatCurrency(group.totalAmount)}</td>
+        <td>-</td>
+        <td>
+            <div style="display: flex; gap: 5px;">
+                <button data-group="${group.groupId}" class="btn-toggle-group btn-primary" style="padding: 5px 10px;">${isExpanded ? 'Ocultar todas as parcelas' : 'Todas as parcelas'}</button>
+                <button data-group="${group.groupId}" class="btn-delete-group btn-danger" title="Excluir todas as parcelas">X</button>
+            </div>
+        </td>
+    `;
+    container.appendChild(tr);
 }
 
 // Geração de PDF usando jsPDF

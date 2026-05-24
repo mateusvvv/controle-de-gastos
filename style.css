@@ -256,6 +256,13 @@ input, select { width: 100%; padding: 10px; margin: 5px 0 10px 0; border: 1px so
     background: #eef4fb;
     border-color: var(--primary);
 }
+.file-name-text {
+    display: block;
+    font-size: 0.8rem;
+    color: #7f8c8d;
+    margin-top: 5px;
+    font-style: italic;
+}
 
 .btn-primary { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
 .btn-success { 
@@ -269,6 +276,36 @@ input, select { width: 100%; padding: 10px; margin: 5px 0 10px 0; border: 1px so
 
 .badge-fixed { background: #ebf5ff; color: #007bff; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
 .badge-once { background: #fef9c3; color: #854d0e; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
+
+/* Estilos para Parcelas Agrupadas */
+.group-header-row { 
+    background-color: #f8fafc; 
+    border-left: 4px solid var(--primary);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.sub-row { 
+    background-color: #fafafa; 
+    font-size: 0.9em; 
+}
+.sub-row td:first-child { 
+    padding-left: 35px; 
+    color: #555;
+    border-left: 2px solid #ddd;
+}
+.hidden { display: none !important; }
+
+/* Botão de Status Pago */
+.btn-paid { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; padding: 5px 8px; font-size: 1rem; }
+.btn-paid.paid { background: #dcfce7; border-color: #86efac; }
+.btn-paid:hover { transform: scale(1.1); }
+
+/* Container para Scroll no Histórico */
+.history .card {
+    overflow-x: auto;
+}
 
 /* Progress Bar */
 .progress-card { text-align: center; margin-bottom: 20px; padding: 15px; }
@@ -296,72 +333,23 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
     .summary .card p { font-size: 1.05rem !important; }
     .summary .card input { padding: 5px; font-size: 14px; }
     .income-card { grid-column: 1 / -1; }
-    .grouped-card,
-    .income-card.grouped-card {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .metric-block {
-        justify-content: flex-start;
-    }
-    .metric-block h3 {
-        min-height: 28px;
-    }
-    .metric-block + .metric-block {
-        border-left: 0;
-        padding-left: 0;
-    }
-    .metric-block:nth-child(even) {
-        border-left: 1px solid #eef1f4;
-        padding-left: 10px;
-    }
-    .metric-block:nth-child(n + 3) {
-        border-top: 1px solid #eef1f4;
-        padding-top: 10px;
-    }
     
     .progress-card.compact { padding: 10px; }
 
     .header-table { flex-direction: column; align-items: flex-start; gap: 10px; }
-    .header-table button { width: 100%; }
+    .header-table button { width: 100%; margin-top: 5px; }
 
-    /* Transformando a tabela em lista de cards no mobile */
-    table, thead, tbody, th, td, tr { 
-        display: block; 
+    /* Tabela modo PC no Mobile com Scroll */
+    .history .card {
+        max-height: 550px;
+        overflow-y: auto;
+        overflow-x: auto;
     }
     
-    thead tr { 
-        position: absolute;
-        top: -9999px;
-        left: -9999px;
+    table {
+        min-width: 700px;
+        font-size: 0.85rem;
     }
-    
-    tr { border: 1px solid #eee; margin-bottom: 15px; border-radius: 8px; background: #fff; }
-    
-    td { 
-        border: none;
-        border-bottom: 1px solid #f9f9f9; 
-        position: relative;
-        padding-left: 50% !important; 
-        text-align: right;
-    }
-    
-    td:before { 
-        position: absolute;
-        left: 10px;
-        width: 45%; 
-        padding-right: 10px; 
-        white-space: nowrap;
-        text-align: left;
-        font-weight: bold;
-        color: #7f8c8d;
-    }
-    
-    td:nth-of-type(1):before { content: "Descrição"; }
-    td:nth-of-type(2):before { content: "Tipo de conta"; }
-    td:nth-of-type(3):before { content: "Tipo"; }
-    td:nth-of-type(4):before { content: "Valor"; }
-    td:nth-of-type(5):before { content: "Recibo"; }
-    td:nth-of-type(6):before { content: "Ações"; }
 }
 
 @media screen and (min-width: 601px) and (max-width: 900px) {
