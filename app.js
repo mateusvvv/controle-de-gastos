@@ -505,7 +505,11 @@ function closeQuickAddModal() {
     quickAddModal.classList.add('hidden');
 }
 
-document.getElementById('close-quick-add-modal')?.addEventListener('click', closeQuickAddModal);
+document.getElementById('close-quick-add-modal')?.addEventListener('click', () => {
+    if (confirm("Tem certeza que deseja fechar o lançador sem salvar as alterações atuais?")) {
+        closeQuickAddModal();
+    }
+});
 
 // Lógica para adicionar despesa do modal
 document.getElementById('quick-add-form')?.addEventListener('submit', async (e) => {
@@ -528,13 +532,17 @@ document.getElementById('quick-add-form')?.addEventListener('submit', async (e) 
     const modalDateRaw = modalDateInput.value;
     let dueDay = new Date().getDate();
     let dateStr;
+    const now = new Date();
 
     if (modalDateRaw) {
         const [y, m, d] = modalDateRaw.split('-');
         dateStr = `${d}/${m}/${y}`;
         dueDay = parseInt(d);
     } else {
-        dateStr = new Date().toLocaleDateString('pt-BR');
+        const d = now.getDate().toString().padStart(2, '0');
+        const m = (now.getMonth() + 1).toString().padStart(2, '0');
+        const y = now.getFullYear();
+        dateStr = `${d}/${m}/${y}`;
     }
 
     const description = `Conta de ${category}`; // Descrição padrão para contas essenciais
@@ -559,8 +567,14 @@ document.getElementById('quick-add-form')?.addEventListener('submit', async (e) 
     modalAmountInput.value = '';
     modalDateInput.value = '';
     modalCategorySelect.focus(); // Foca na seleção de categoria para o próximo lançamento
+    
+    // Garante que a seção de contas fixas esteja aberta para mostrar o novo item
+    expandedGroups.add('fixed-monthly-group');
+    
     updateUI();
     alert(`Conta de ${category} adicionada com sucesso!`);
+    
+    closeQuickAddModal(); // Fecha o painel automaticamente após adicionar
 });
 
 async function deleteExpense(id) {
