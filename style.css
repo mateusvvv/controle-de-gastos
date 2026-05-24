@@ -413,32 +413,88 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
     .header-table { flex-direction: column; align-items: flex-start; gap: 10px; }
     .header-table button { width: 100%; margin-top: 5px; }
 
-    /* Ajuste da Tabela para evitar scroll lateral */
+    /* Transformando a tabela em lista de cards centralizados no mobile */
+    table, thead, tbody, th, td, tr { 
+        display: block; 
+    }
+    
+    thead { display: none; }
+
     table {
         font-size: 0.9rem;
         width: 100%;
+        border-spacing: 0 10px;
     }
-    th, td {
-        padding: 10px 2px;
-            vertical-align: middle;
-        }
-        /* Impede quebra de linha em valores e botões */
-        td:not(:first-child) {
-            white-space: nowrap;
+
+    tr:not(.installments-wrapper-row) {
+        background: white;
+        margin-bottom: 15px;
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border-right: 6px solid var(--primary);
+        text-align: center;
     }
-    td:first-child { 
-        padding-left: 0; 
-            white-space: normal; /* Permite quebra de linha na descrição se o nome for longo */
-            word-break: break-word;
-            line-height: 1.2;
+
+    td {
+        border: none !important;
+        padding: 6px 0 !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+        white-space: normal !important;
     }
-    td:last-child { 
-            border-right: 4px solid var(--primary); 
-        padding-right: 4px;
+
+    td:first-child {
+        font-weight: 800;
+        font-size: 1.1rem;
+        color: #2c3e50;
     }
-    /* Esconde a coluna de categoria no mobile para ganhar espaço e evitar scroll */
-    th:nth-child(2), 
-    td:nth-child(2) { display: none; }
+
+    /* Mostra a categoria novamente já que agora temos espaço vertical */
+    td:nth-child(2) { display: flex !important; color: #7f8c8d; font-size: 0.85rem; }
+
+    /* Botões de ação centralizados */
+    td:last-child {
+        margin-top: 12px;
+        padding-top: 15px !important;
+        border-top: 1px solid #f1f5f9 !important;
+        gap: 20px !important;
+    }
+
+    /* Ajuste para a linha que contém o container de scroll das parcelas */
+    .installments-wrapper-row {
+        margin-top: -10px;
+        margin-bottom: 25px;
+        padding: 0 5px;
+    }
+
+    .installments-wrapper-row td {
+        display: block !important;
+        width: 100% !important;
+        padding: 0 !important;
+    }
+    
+    .installments-scroll-container {
+        width: 100%;
+        box-sizing: border-box;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .installment-block {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        text-align: left;
+    }
+
+    .installment-meta {
+        width: 100%;
+        justify-content: space-between;
+        border-top: 1px dashed #eee;
+        padding-top: 8px;
+    }
 }
 
 @media screen and (min-width: 601px) and (max-width: 900px) {
