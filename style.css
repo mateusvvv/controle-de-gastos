@@ -19,8 +19,8 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
 #user-display {
     color: var(--white);
     font-size: 0.9rem;
-    font-weight: 500;
-    opacity: 0.85;
+    font-weight: 600;
+    opacity: 1;
 }
 
 /* Dropdown Menu */
