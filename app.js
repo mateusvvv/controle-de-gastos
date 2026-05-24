@@ -24,6 +24,8 @@ const savingsGoalInput = document.getElementById('savings-goal');
 const walletInput = document.getElementById('wallet-value');
 const expensesList = document.getElementById('expenses-list');
 const amountInput = document.getElementById('amount');
+const categorySelect = document.getElementById('category');
+const otherCategoryInput = document.getElementById('other-category');
 
 // Auxiliares de Formatação
 const formatCurrency = (value) => {
@@ -156,6 +158,15 @@ amountInput.addEventListener('input', applyMask);
 
 document.getElementById('month-filter').addEventListener('change', updateUI);
 
+// Mostrar/Esconder campo de categoria personalizada
+categorySelect.addEventListener('change', (e) => {
+    if (e.target.value === 'Outros') {
+        otherCategoryInput.classList.remove('hidden');
+    } else {
+        otherCategoryInput.classList.add('hidden');
+    }
+});
+
 expenseForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -169,7 +180,12 @@ expenseForm.addEventListener('submit', async (e) => {
     const installments = parseInt(document.getElementById('installments').value) || 1;
     const description = document.getElementById('desc').value;
     const amount = parseCurrency(document.getElementById('amount').value);
-    const category = document.getElementById('category').value;
+    
+    let category = categorySelect.value;
+    if (category === 'Outros' && otherCategoryInput.value.trim() !== '') {
+        category = otherCategoryInput.value.trim();
+    }
+
     const isFixed = document.getElementById('is-fixed').checked;
 
     if (!editingId && installments > 1) {
@@ -225,6 +241,7 @@ expenseForm.addEventListener('submit', async (e) => {
 
     updateUI();
     expenseForm.reset();
+    otherCategoryInput.classList.add('hidden');
 });
 
 const toBase64 = file => new Promise((resolve, reject) => {
@@ -290,7 +307,18 @@ function editExpense(id) {
 
     document.getElementById('desc').value = exp.description;
     document.getElementById('amount').value = formatCurrency(exp.amount);
-    document.getElementById('category').value = exp.category;
+    
+    // Lógica para carregar categoria personalizada na edição
+    const optionExists = Array.from(categorySelect.options).some(opt => opt.value === exp.category);
+    if (optionExists) {
+        categorySelect.value = exp.category;
+        otherCategoryInput.classList.add('hidden');
+    } else {
+        categorySelect.value = 'Outros';
+        otherCategoryInput.value = exp.category;
+        otherCategoryInput.classList.remove('hidden');
+    }
+
     document.getElementById('is-fixed').checked = exp.isFixed || false;
 
     editingId = id;
@@ -396,15 +424,25 @@ function updateUI() {
     let fixedTotal = 0;
     let variableTotal = 0;
 
+    const categoryIcons = {
+        'Água': '💧',
+        'Energia': '⚡',
+        'Cartão de Crédito': '💳',
+        'Lazer': '🎡',
+        'Gasolina': '⛽',
+        'Outros': '📁'
+    };
+
     filtered.forEach(exp => {
         totalSpent += exp.amount;
         if (exp.isFixed) fixedTotal += exp.amount;
         else variableTotal += exp.amount;
 
+        const icon = categoryIcons[exp.category] || '❓';
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${exp.description}</td>
-            <td>${exp.category}</td>
+            <td style="display: flex; align-items: center; gap: 8px;"><span>${icon}</span> ${exp.category}</td>
             <td>${exp.isFixed ? '<span class="badge-fixed">Fixa</span>' : '<span class="badge-once">1x</span>'}</td>
             <td>${formatCurrency(exp.amount || 0)}</td>
             <td>${exp.receipt ? `<a href="${exp.receipt}" target="_blank">Ver</a>` : '-'}</td>
