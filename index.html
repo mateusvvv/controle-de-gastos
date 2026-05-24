@@ -49,7 +49,7 @@
                 </div>
                 <div class="metric-block">
                     <h3>Recebido em (Fixo)</h3>
-                    <input type="date" id="salary-date">
+                    <input type="text" id="salary-date" placeholder="Escolher data" onfocus="(this.type='date'); this.showPicker()" onblur="if(!this.value)this.type='text'">
                 </div>
                 <div class="metric-block">
                     <h3>Renda Extra do Mês</h3>
@@ -57,7 +57,7 @@
                 </div>
                 <div class="metric-block">
                     <h3>Recebido em (Extra)</h3>
-                    <input type="date" id="extra-income-date">
+                    <input type="text" id="extra-income-date" placeholder="Escolher data" onfocus="(this.type='date'); this.showPicker()" onblur="if(!this.value)this.type='text'">
                 </div>
                 <div class="metric-block reserve-block">
                     <h3>Saldo Renda Fixa (Pós-Contas)</h3>
@@ -109,6 +109,8 @@
                         <option value="Internet">🌐 Internet</option>
                         <option value="Aluguel">🏠 Aluguel</option>
                         <option value="Mercado">🛒 Mercado</option>
+                        <option value="Seguro da Moto">🏍️ Seguro da Moto</option>
+                        <option value="Seguro de Carro">🚗 Seguro de Carro</option>
                         <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
                         <option value="Lazer">🎡 Lazer</option>
                         <option value="Gasolina">⛽ Gasolina</option>
@@ -191,6 +193,8 @@
                     <option value="Internet">🌐 Internet</option>
                     <option value="Aluguel">🏠 Aluguel</option>
                     <option value="Mercado">🛒 Mercado</option>
+                    <option value="Seguro da Moto">🏍️ Seguro da Moto</option>
+                    <option value="Seguro de Carro">🚗 Seguro de Carro</option>
                     <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
                     <option value="Lazer">🎡 Lazer</option>
                     <option value="Gasolina">⛽ Gasolina</option>

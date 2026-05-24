@@ -87,8 +87,15 @@ onAuthStateChanged(auth, async (user) => {
             extraIncomeInput.value = extraIncome > 0 ? "R$ " + extraIncome.toLocaleString('pt-BR') : "";
             savingsGoalInput.value = savingsGoal > 0 ? "R$ " + savingsGoal.toLocaleString('pt-BR') : "";
             walletInput.value = walletValue > 0 ? "R$ " + walletValue.toLocaleString('pt-BR') : "";
-            salaryDateInput.value = salaryDate;
-            extraIncomeDateInput.value = extraIncomeDate;
+            
+            if (salaryDate) {
+                salaryDateInput.type = 'date';
+                salaryDateInput.value = salaryDate;
+            }
+            if (extraIncomeDate) {
+                extraIncomeDateInput.type = 'date';
+                extraIncomeDateInput.value = extraIncomeDate;
+            }
         }
 
         // Carregar Coleção de Gastos
@@ -615,7 +622,7 @@ function updateChart(filteredData) {
     const ctx = canvas.getContext('2d');
     
     // Agrupar totais por categoria
-    const categories = ['Água', 'Energia', 'Internet', 'Aluguel', 'Mercado', 'Cartão de Crédito', 'Lazer', 'Gasolina', 'Outros'];
+    const categories = ['Água', 'Energia', 'Internet', 'Aluguel', 'Mercado', 'Seguro da Moto', 'Seguro de Carro', 'Cartão de Crédito', 'Lazer', 'Gasolina', 'Outros'];
     const data = filteredData || [];
     const totals = categories.map(cat => {
         return data
@@ -652,6 +659,8 @@ function updateChart(filteredData) {
                     '#2ecc71', // Internet
                     '#e67e22', // Aluguel
                     '#1abc9c', // Mercado
+                    '#607d8b', // Seguro da Moto
+                    '#795548', // Seguro de Carro
                     '#e74c3c', // Cartão de Crédito
                     '#9b59b6', // Lazer
                     '#f39c12', // Gasolina
@@ -748,6 +757,8 @@ function renderTableAndChart() {
         'Internet': '🌐',
         'Aluguel': '🏠',
         'Mercado': '🛒',
+        'Seguro da Moto': '🏍️',
+        'Seguro de Carro': '🚗',
         'Cartão de Crédito': '💳',
         'Lazer': '🎡',
         'Gasolina': '⛽',
@@ -766,6 +777,16 @@ function renderTableAndChart() {
     otherExpenses.forEach(exp => {
         if (exp.groupId && !processedGroups.has(exp.groupId)) {
             const groupItems = expenses.filter(e => e.groupId === exp.groupId);
+            
+            // Ordena as parcelas por data de forma crescente (1/36, 2/36...)
+            groupItems.sort((a, b) => {
+                const parse = (s) => {
+                    const p = s.split(/[-/]/);
+                    return p[0].length === 4 ? new Date(p[0], p[1]-1, p[2]) : new Date(p[2], p[1]-1, p[0]);
+                };
+                return parse(a.date) - parse(b.date);
+            });
+
             groupedExpenses.push({
                 type: 'group',
                 groupId: exp.groupId,
