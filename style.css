@@ -362,13 +362,23 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
 
     /* Ajuste da Tabela para evitar scroll lateral */
     table {
-        font-size: 0.82rem;
+        font-size: 0.9rem;
         width: 100%;
     }
     th, td {
-        padding: 8px 2px;
-        word-break: break-word;
+        padding: 10px 2px;
+        white-space: nowrap;
     }
+    td:first-child { 
+        padding-left: 0; 
+    }
+    td:last-child { 
+        border-right: 3px solid var(--primary); 
+        padding-right: 4px;
+    }
+    /* Esconde a coluna de categoria no mobile para ganhar espaço e evitar scroll */
+    th:nth-child(2), 
+    td:nth-child(2) { display: none; }
 }
 
 @media screen and (min-width: 601px) and (max-width: 900px) {

@@ -704,7 +704,7 @@ function renderRow(exp, container, icons, extraClass = '') {
         <td>${exp.isFixed ? '<span class="badge-fixed">Fixa</span>' : '<span class="badge-once">1x</span>'}</td>
         <td>${formatCurrency(exp.amount || 0)}</td>
         <td>${exp.receipt ? `<a href="${exp.receipt}" target="_blank">Ver</a>` : '-'}</td>
-        <td style="display: flex; gap: 5px; justify-content: flex-end;">
+        <td style="display: flex; gap: 3px; justify-content: flex-end;">
             <button data-id="${exp.id}" class="btn-paid ${exp.isPaid ? 'paid' : ''}" title="Alternar Status">${exp.isPaid ? '✅' : '⏳'}</button>
             <button data-id="${exp.id}" class="btn-delete btn-danger">X</button>
         </td>
@@ -727,7 +727,7 @@ function renderGroupSummary(group, container, icons, currentMonth) {
         <td>${formatCurrency(group.totalAmount)}</td>
         <td>-</td>
         <td style="text-align: right;">
-            <div style="display: flex; gap: 5px; justify-content: flex-end;">
+            <div style="display: flex; gap: 3px; justify-content: flex-end;">
                 <button data-group="${group.groupId}" class="btn-toggle-group btn-primary" style="padding: 5px 10px;">${isExpanded ? 'Ocultar todas as parcelas' : 'Todas as parcelas'}</button>
                 <button data-group="${group.groupId}" class="btn-delete-group btn-danger" title="Excluir todas as parcelas">X</button>
             </div>
