@@ -660,13 +660,27 @@ function renderTableAndChart() {
             renderGroupSummary(item, expensesList, categoryIcons, currentMonthStr);
             
             const isExpanded = expandedGroups.has(item.groupId);
+            
+            const wrapperTr = document.createElement('tr');
+            wrapperTr.className = `installment-row-${item.groupId} ${isExpanded ? '' : 'hidden'} installments-wrapper-row`;
+            
+            const wrapperTd = document.createElement('td');
+            wrapperTd.colSpan = 6;
+            
+            const scrollDiv = document.createElement('div');
+            scrollDiv.className = 'installments-scroll-container';
+            
             item.items.forEach(subItem => {
                 if (getExpenseYearMonth(subItem.date) === currentMonthStr) {
                     if (subItem.isPaid) totalPaid += subItem.amount;
                     variableTotal += subItem.amount;
                 }
-                renderRow(subItem, expensesList, categoryIcons, `installment-row-${item.groupId} ${isExpanded ? '' : 'hidden'} sub-row`);
+                renderInstallmentBlock(subItem, scrollDiv);
             });
+            
+            wrapperTd.appendChild(scrollDiv);
+            wrapperTr.appendChild(wrapperTd);
+            expensesList.appendChild(wrapperTr);
         }
     });
 
@@ -710,6 +724,26 @@ function renderRow(exp, container, icons, extraClass = '') {
         </td>
     `;
     container.appendChild(tr);
+}
+
+function renderInstallmentBlock(exp, container) {
+    const div = document.createElement('div');
+    div.className = `installment-block ${exp.isPaid ? 'is-paid' : ''}`;
+    div.innerHTML = `
+        <div class="installment-info">
+            <span class="installment-desc">${exp.description}</span>
+            <span class="installment-date">${exp.date}</span>
+        </div>
+        <div class="installment-meta">
+            <span class="installment-amount">${formatCurrency(exp.amount || 0)}</span>
+            <div class="installment-actions">
+                ${exp.receipt ? `<a href="${exp.receipt}" target="_blank" class="btn-receipt">📄</a>` : ''}
+                <button data-id="${exp.id}" class="btn-paid ${exp.isPaid ? 'paid' : ''}" title="Alternar Status">${exp.isPaid ? '✅' : '⏳'}</button>
+                <button data-id="${exp.id}" class="btn-delete btn-danger">X</button>
+            </div>
+        </div>
+    `;
+    container.appendChild(div);
 }
 
 function renderGroupSummary(group, container, icons, currentMonth) {

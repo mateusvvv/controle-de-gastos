@@ -290,14 +290,67 @@ input, select { width: 100%; padding: 10px; margin: 5px 0 10px 0; border: 1px so
     z-index: 10;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-.sub-row { 
-    background-color: #fafafa; 
-    font-size: 0.9em; 
+
+.installments-wrapper-row td {
+    padding: 0;
 }
-.sub-row td:first-child { 
-    padding-left: 35px; 
-    color: #555;
-    border-left: 2px solid #ddd;
+
+.installments-scroll-container {
+    max-height: 250px;
+    overflow-y: auto;
+    background: #f1f5f9;
+    padding: 10px;
+    border-bottom: 2px solid var(--primary);
+}
+
+.installment-block {
+    background: white;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-left: 4px solid #cbd5e1;
+}
+
+.installment-block.is-paid {
+    border-left-color: var(--success);
+    background: #f0fff4;
+}
+
+.installment-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.installment-desc {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #2c3e50;
+}
+
+.installment-date {
+    font-size: 0.75rem;
+    color: #7f8c8d;
+}
+
+.installment-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.installment-amount {
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.installment-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 .hidden { display: none !important; }
 
@@ -308,7 +361,7 @@ input, select { width: 100%; padding: 10px; margin: 5px 0 10px 0; border: 1px so
 
 /* Container para Scroll no Histórico */
 .history .card {
-    overflow-x: auto;
+    overflow-x: hidden;
 }
 
 /* Progress Bar */
@@ -367,13 +420,20 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
     }
     th, td {
         padding: 10px 2px;
-        white-space: nowrap;
+            vertical-align: middle;
+        }
+        /* Impede quebra de linha em valores e botões */
+        td:not(:first-child) {
+            white-space: nowrap;
     }
     td:first-child { 
         padding-left: 0; 
+            white-space: normal; /* Permite quebra de linha na descrição se o nome for longo */
+            word-break: break-word;
+            line-height: 1.2;
     }
     td:last-child { 
-        border-right: 3px solid var(--primary); 
+            border-right: 4px solid var(--primary); 
         padding-right: 4px;
     }
     /* Esconde a coluna de categoria no mobile para ganhar espaço e evitar scroll */
