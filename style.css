@@ -247,6 +247,15 @@ canvas#expenseChart {
 
 input, select { width: 100%; padding: 10px; margin: 5px 0 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
 
+/* Garante visibilidade do placeholder e do texto nos campos de data */
+input::placeholder {
+    color: #7f8c8d !important;
+    opacity: 1 !important;
+}
+input {
+    color: #2c3e50;
+}
+
 .installments-row {
     display: flex;
     align-items: center;
