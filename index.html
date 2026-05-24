@@ -23,6 +23,12 @@
                         <a href="#" id="menu-home">Início</a>
                         <a href="#" id="menu-chart">Mostrar Gráfico</a>
                         <a href="#" id="menu-history" class="hidden">Histórico de Gastos</a>
+                        <div class="menu-usage-item">
+                            <span>Uso da Renda: <strong id="menu-progress-text">0%</strong></span>
+                            <div class="progress-container mini" style="margin-top: 5px; height: 6px;">
+                                <div id="menu-progress-bar" class="progress-bar"></div>
+                            </div>
+                        </div>
                         <hr>
                         <a href="#" id="logout-btn" style="color: var(--danger);">Sair</a>
                     </div>
@@ -82,12 +88,6 @@
                 <div class="progress-container mini"><div id="goal-bar" class="progress-bar goal-bg"></div></div>
                 <p id="goal-status" class="mini-text"></p>
             </div>
-            </div>
-            
-            <button id="toggle-usage-btn" class="btn-summary-toggle">📊 Ver Uso da Renda</button>
-            <div id="usage-details" class="card progress-card compact hidden" style="margin-bottom: 20px;">
-                <div class="progress-container"><div id="progress-bar" class="progress-bar"></div></div>
-                <p id="progress-text">0% do salário utilizado</p>
             </div>
 
             <div class="actions">

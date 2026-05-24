@@ -200,14 +200,7 @@ document.getElementById('is-fixed').addEventListener('change', function() {
 document.getElementById('toggle-summary-btn').addEventListener('click', function() {
     const summaryGrid = document.getElementById('summary-grid');
     summaryGrid.classList.toggle('hidden-summary');
-    this.innerText = summaryGrid.classList.contains('hidden-summary') ? '📊 Ver Resumo Financeiro' : '🔼 Ocultar Resumo';
-});
-
-// Controle do Painel de Uso da Renda
-document.getElementById('toggle-usage-btn')?.addEventListener('click', function() {
-    const details = document.getElementById('usage-details');
-    details.classList.toggle('hidden');
-    this.innerText = details.classList.contains('hidden') ? '📊 Ver Uso da Renda' : '🔼 Ocultar Uso da Renda';
+    this.innerText = summaryGrid.classList.contains('hidden-summary') ? '📊 Resumo Financeiro' : '🔼 Ocultar Resumo';
 });
 
 async function updateUserSettings() {
@@ -717,10 +710,13 @@ function updateCalculationsOnly() {
 
     // Atualiza Barra de Progresso
     const percent = totalIncome > 0 ? Math.min((totalCommitted / totalIncome) * 100, 100) : 0;
-    const progressBar = document.getElementById('progress-bar');
-    progressBar.style.width = percent + '%';
-    progressBar.style.backgroundColor = percent > 90 ? 'var(--danger)' : (percent > 70 ? '#e67e22' : 'var(--success)');
-    document.getElementById('progress-text').innerText = `${percent.toFixed(1)}% do salário utilizado`;
+    
+    const menuProgressBar = document.getElementById('menu-progress-bar');
+    const menuProgressText = document.getElementById('menu-progress-text');
+    
+    if (menuProgressBar) menuProgressBar.style.width = percent + '%';
+    if (menuProgressBar) menuProgressBar.style.backgroundColor = percent > 90 ? 'var(--danger)' : (percent > 70 ? '#e67e22' : 'var(--success)');
+    if (menuProgressText) menuProgressText.innerText = `${percent.toFixed(1)}%`;
 
     // Atualiza Barra de Meta de Economia (Baseado no Saldo na Carteira)
     const goalStatus = document.getElementById('goal-status');
