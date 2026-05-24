@@ -591,23 +591,20 @@ function updateUI() {
 
 function updateCalculationsOnly() {
     const filtered = getFilteredExpenses();
-    let totalSpent = filtered.filter(exp => exp.isPaid).reduce((sum, exp) => sum + exp.amount, 0);
+    let totalPaid = filtered.filter(exp => exp.isPaid).reduce((sum, exp) => sum + exp.amount, 0);
     
     // Renda Total
     const totalIncome = budget + extraIncome;
-    document.getElementById('total-income').innerText = formatCurrency(totalIncome);
 
-    // Saldo disponível após gastos
-    const availableAfterExpenses = totalIncome - totalSpent;
+    // Saldo da Renda Fixa após pagar as contas (Conforme solicitado: Orçamento Fixo - Gastos Pagos)
+    const finalReserve = budget - totalPaid;
     
-    // Saldo que sobra depois que você tira o dinheiro da carteira e da meta
-    const finalReserve = availableAfterExpenses - walletValue - savingsGoal;
     const reserveEl = document.getElementById('final-reserve');
     reserveEl.innerText = formatCurrency(finalReserve);
     reserveEl.style.color = finalReserve >= 0 ? '#1f7a55' : 'var(--danger)';
 
     // Atualiza Barra de Progresso
-    const percent = totalIncome > 0 ? Math.min((totalSpent / totalIncome) * 100, 100) : 0;
+    const percent = totalIncome > 0 ? Math.min((totalPaid / totalIncome) * 100, 100) : 0;
     const progressBar = document.getElementById('progress-bar');
     progressBar.style.width = percent + '%';
     progressBar.style.backgroundColor = percent > 90 ? 'var(--danger)' : (percent > 70 ? '#e67e22' : 'var(--success)');
@@ -679,12 +676,13 @@ function renderTableAndChart() {
 
     // Lógica da Meta de Economia
     const totalIncome = budget + extraIncome;
-    const availableAfterExpenses = totalIncome - totalPaid;
+    const finalReserve = budget - totalPaid;
+    const totalIncomeAvailable = totalIncome - totalPaid; // Disponibilidade real total
     const goalStatus = document.getElementById('goal-status');
     const goalBar = document.getElementById('goal-bar');
 
     if (savingsGoal > 0) {
-        const goalPercent = Math.min(Math.max((availableAfterExpenses / savingsGoal) * 100, 0), 100);
+        const goalPercent = Math.min(Math.max((totalIncomeAvailable / savingsGoal) * 100, 0), 100);
         goalBar.style.width = goalPercent + '%';
         goalBar.style.backgroundColor = goalPercent >= 100 ? 'var(--success)' : 'var(--primary)';
         goalStatus.innerText = goalPercent >= 100 ? "Meta alcançada!" : `${goalPercent.toFixed(0)}% da meta`;

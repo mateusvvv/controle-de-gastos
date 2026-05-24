@@ -327,12 +327,41 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
     .container { padding: 8px; }
     .login-container { width: 90%; padding: 20px; }
     
-    .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    /* Mudança para 1 coluna no mobile para evitar o aspecto 'encurtado' */
+    .summary { grid-template-columns: 1fr; gap: 12px; }
     .summary .card { padding: 12px; }
-    .summary .card h3 { font-size: 0.7rem; }
-    .summary .card p { font-size: 1.05rem !important; }
-    .summary .card input { padding: 5px; font-size: 14px; }
+    .summary .card h3 { font-size: 0.75rem; margin-bottom: 5px; }
+    .summary .card p { font-size: 1.15rem !important; margin: 4px 0; }
+    .summary .card input { padding: 8px; font-size: 15px; }
+    
     .income-card { grid-column: 1 / -1; }
+
+    /* Organização interna da Renda: Blocos empilhados ou em 2 colunas mais largas */
+    .income-card.grouped-card {
+        grid-template-columns: 1fr; /* Empilha no mobile para dar leitura */
+        gap: 8px;
+    }
+    .income-card .metric-block + .metric-block {
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid #f1f3f5;
+        padding-top: 8px;
+    }
+
+    /* Organização interna das Dívidas no Mobile */
+    .debt-card.grouped-card {
+        grid-template-columns: 1fr;
+    }
+    .debt-card .metric-block + .metric-block {
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid #f1f3f5;
+        padding-top: 8px;
+    }
+    .debt-card .metric-block {
+        min-height: auto;
+    }
+    .debt-card .metric-block h3 { min-height: auto; }
     
     .progress-card.compact { padding: 10px; }
 
