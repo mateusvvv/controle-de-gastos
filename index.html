@@ -22,7 +22,6 @@
                 <div id="dropdown-menu" class="dropdown-content">
                     <a href="#" id="menu-home">Início</a>
                     <a href="#" id="menu-history" class="hidden">Histórico de Gastos</a>
-                    <a href="#" id="menu-admin">Painel Admin</a>
                     <hr>
                     <a href="#" id="logout-btn" style="color: var(--danger);">Sair</a>
                 </div>
@@ -46,19 +45,45 @@
 
     <main class="container">
         <section id="section-home" class="view-section">
-            <div class="summary">
+            <button id="toggle-summary-btn" class="btn-summary-toggle">📊 Ver Resumo Financeiro</button>
+            
+            <div class="summary hidden-summary" id="summary-grid">
             <div class="card">
-                <h3>Orçamento Mensal</h3>
+                <h3>Salário/Renda</h3>
                 <input type="text" id="monthly-budget" placeholder="R$ 0,00">
             </div>
             <div class="card">
-                <h3>Total Gasto</h3>
-                <p id="total-spent" class="negative">R$ 0,00</p>
+                <h3>Dívidas Fixas</h3>
+                <p id="fixed-total" class="negative">R$ 0,00</p>
             </div>
             <div class="card">
-                <h3>Saldo Restante</h3>
-                <p id="remaining-balance" class="positive">R$ 0,00</p>
+                <h3>Dívidas Pontuais</h3>
+                <p id="variable-total" class="negative">R$ 0,00</p>
             </div>
+            <div class="card">
+                <h3>Total Gasto</h3>
+                <p id="total-spent" style="color: #e67e22; font-weight: bold; font-size: 1.5em;">R$ 0,00</p>
+            </div>
+            <div class="card">
+                <h3>Na Carteira (Alocado)</h3>
+                <input type="text" id="wallet-value" placeholder="R$ 0,00">
+            </div>
+            <div class="card">
+                <h3>Meta de Economia</h3>
+                <input type="text" id="savings-goal" placeholder="Definir meta R$">
+                <div class="progress-container mini"><div id="goal-bar" class="progress-bar goal-bg"></div></div>
+                <p id="goal-status" class="mini-text"></p>
+            </div>
+            <div class="card" style="background-color: #f8f9fa; border: 1px dashed var(--primary);">
+                <h3>Saldo Não Alocado</h3>
+                <p id="final-reserve" style="font-weight: bold; font-size: 1.5em; color: #2c3e50;">R$ 0,00</p>
+            </div>
+            </div>
+            
+            <div class="card progress-card compact">
+                <h3>Uso do Salário</h3>
+                <div class="progress-container"><div id="progress-bar" class="progress-bar"></div></div>
+                <p id="progress-text">0% do salário utilizado</p>
             </div>
 
             <div class="charts">
@@ -74,6 +99,7 @@
                 <form id="expense-form">
                     <input type="text" id="desc" placeholder="Descrição (ex: Aluguel)" required>
                     <input type="text" id="amount" placeholder="Valor (R$)" required>
+                    <input type="number" id="installments" placeholder="Nº de Parcelas (1 para à vista)" min="1" value="1">
                     <select id="category">
                         <option value="Moradia">Moradia</option>
                         <option value="Alimentação">Alimentação</option>
@@ -81,6 +107,10 @@
                         <option value="Lazer">Lazer</option>
                         <option value="Outros">Outros</option>
                     </select>
+                    <div style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
+                        <input type="checkbox" id="is-fixed" style="width: auto; margin: 0;">
+                        <label for="is-fixed">Despesa Fixa (Mensal)</label>
+                    </div>
                     <div class="file-input">
                         <label for="receipt">Comprovante (Imagem)</label>
                         <input type="file" id="receipt" accept="image/*">
@@ -106,6 +136,7 @@
                         <tr>
                             <th>Descrição</th>
                             <th>Categoria</th>
+                            <th>Tipo</th>
                             <th>Valor</th>
                             <th>Recibo</th>
                             <th>Ações</th>

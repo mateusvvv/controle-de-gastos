@@ -1,45 +1,40 @@
+import { auth } from './firebase-config.js';
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
 const USERS = {
     'mat3usvvv619@gmail.com': 'Lucas',
     'daianegoncalves3441@gmail.com': 'Daiane',
-    'elvisbezerracabralbj03@gmail.com': 'Elvis'
+    'elvisbezerracabralbj03@gmail.com': 'Elvis',
+    'anapaulacabralbj@gmail.com': 'ANA'
 };
-const ADMIN_PASS = '15112020';
 
 document.getElementById('login-form')?.addEventListener('submit', function(e) {
     e.preventDefault();
     
-    const user = document.getElementById('username').value;
+    const email = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
 
-    // Validação com base no mapeamento de usuários
-    if (USERS[user] && pass === ADMIN_PASS) {
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userName', USERS[user]);
-        window.location.href = 'index.html';
-    } else {
-        document.getElementById('error-message').innerText = 'Usuário ou senha incorretos.';
-    }
+    signInWithEmailAndPassword(auth, email, pass)
+        .then(() => {
+            window.location.href = 'index.html';
+        })
+        .catch((error) => {
+            document.getElementById('error-message').innerText = 'E-mail ou senha incorretos.';
+            console.error("Erro no login:", error);
+        });
 });
 
-// Proteção de rota simplificada
-if (window.location.pathname.includes('index.html')) {
-    if (localStorage.getItem('isLoggedIn') !== 'true') {
-        window.location.href = 'login.html';
-    }
-}
-
-// Exibir nome do usuário logado na interface
-document.addEventListener('DOMContentLoaded', () => {
-    const userName = localStorage.getItem('userName');
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+// Observador de estado de autenticação (Proteção de rota e UI)
+onAuthStateChanged(auth, (user) => {
     const userDisplay = document.getElementById('user-display');
-    if (userDisplay && isLoggedIn && userName) {
-        userDisplay.innerText = `Logado como ${userName}`;
-        // Torna o link "Histórico de Gastos" visível para qualquer usuário logado
-        const menuHistory = document.getElementById('menu-history');
-        if (menuHistory) {
-            menuHistory.classList.remove('hidden');
-        }
+    const isIndex = window.location.pathname.includes('index.html');
+
+    if (user) {
+        const userName = USERS[user.email] || user.displayName || 'Usuário';
+        if (userDisplay) userDisplay.innerText = userName;
+        document.getElementById('menu-history')?.classList.remove('hidden');
+    } else if (isIndex) {
+        window.location.href = 'login.html';
     }
 });
 
@@ -77,14 +72,6 @@ document.getElementById('menu-history')?.addEventListener('click', () => {
     sectionAdmin.classList.remove('hidden');
 });
 
-document.getElementById('menu-admin')?.addEventListener('click', () => {
-    if (!sectionAdmin.classList.contains('hidden')) {
-        alert("Você já está no Painel Admin.");
-        return;
-    }
-    adminModal.style.display = 'block';
-});
-
 document.getElementById('admin-close')?.addEventListener('click', () => {
     adminModal.style.display = 'none';
 });
@@ -107,7 +94,7 @@ document.getElementById('admin-login-confirm')?.addEventListener('click', () => 
 });
 
 document.getElementById('logout-btn')?.addEventListener('click', () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userName');
-    window.location.href = 'login.html';
+    signOut(auth).then(() => {
+        window.location.href = 'login.html';
+    });
 });

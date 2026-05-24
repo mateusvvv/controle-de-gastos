@@ -1,10 +1,14 @@
 let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
 let budget = parseFloat(localStorage.getItem('budget')) || 0;
+let savingsGoal = parseFloat(localStorage.getItem('savingsGoal')) || 0;
+let walletValue = parseFloat(localStorage.getItem('walletValue')) || 0;
 let expenseChart = null;
 let editingId = null;
 
 const expenseForm = document.getElementById('expense-form');
 const budgetInput = document.getElementById('monthly-budget');
+const savingsGoalInput = document.getElementById('savings-goal');
+const walletInput = document.getElementById('wallet-value');
 const expensesList = document.getElementById('expenses-list');
 const amountInput = document.getElementById('amount');
 
@@ -30,19 +34,43 @@ const applyMask = (e) => {
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     budgetInput.value = budget > 0 ? formatCurrency(budget) : "";
+    savingsGoalInput.value = savingsGoal > 0 ? formatCurrency(savingsGoal) : "";
+    walletInput.value = walletValue > 0 ? formatCurrency(walletValue) : "";
 
     // Define o mês atual como padrão no filtro
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
     document.getElementById('month-filter').value = currentMonth;
     
+    checkRecurringAndInstallments();
     updateUI();
+});
+
+// Controle do Painel de Resumo
+document.getElementById('toggle-summary-btn').addEventListener('click', function() {
+    const summaryGrid = document.getElementById('summary-grid');
+    summaryGrid.classList.toggle('hidden-summary');
+    this.innerText = summaryGrid.classList.contains('hidden-summary') ? '📊 Ver Resumo Financeiro' : '🔼 Ocultar Resumo';
 });
 
 budgetInput.addEventListener('input', applyMask);
 budgetInput.addEventListener('change', (e) => {
     budget = parseCurrency(e.target.value);
     localStorage.setItem('budget', budget);
+    updateUI();
+});
+
+savingsGoalInput.addEventListener('input', applyMask);
+savingsGoalInput.addEventListener('change', (e) => {
+    savingsGoal = parseCurrency(e.target.value);
+    localStorage.setItem('savingsGoal', savingsGoal);
+    updateUI();
+});
+
+walletInput.addEventListener('input', applyMask);
+walletInput.addEventListener('change', (e) => {
+    walletValue = parseCurrency(e.target.value);
+    localStorage.setItem('walletValue', walletValue);
     updateUI();
 });
 
@@ -60,15 +88,43 @@ expenseForm.addEventListener('submit', async (e) => {
         receiptData = await toBase64(fileInput.files[0]);
     }
 
+    const installments = parseInt(document.getElementById('installments').value) || 1;
+    const description = document.getElementById('desc').value;
+    const amount = parseCurrency(document.getElementById('amount').value);
+    const category = document.getElementById('category').value;
+    const isFixed = document.getElementById('is-fixed').checked;
+
+    if (!editingId && installments > 1) {
+        // Lógica de Parcelamento
+        const startDate = new Date();
+        for (let i = 0; i < installments; i++) {
+            const futureDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, 15);
+            const newExpense = {
+                id: Date.now() + i,
+                description: `${description} (${i + 1}/${installments})`,
+                amount: amount,
+                category: category,
+                isFixed: false, // Parcelas não são "infinitas", são temporárias
+                date: futureDate.toLocaleDateString('pt-BR'),
+                receipt: receiptData
+            };
+            expenses.push(newExpense);
+        }
+        saveAndRefresh();
+        expenseForm.reset();
+        return;
+    }
+
     if (editingId) {
         const index = expenses.findIndex(exp => exp.id === editingId);
         if (index !== -1) {
             expenses[index] = {
                 ...expenses[index],
-                description: document.getElementById('desc').value,
-                amount: parseCurrency(document.getElementById('amount').value),
-                category: document.getElementById('category').value,
-                receipt: receiptData || expenses[index].receipt
+                description: description,
+                amount: amount,
+                category: category,
+                receipt: receiptData || expenses[index].receipt,
+                isFixed: isFixed
             };
         }
         editingId = null;
@@ -79,6 +135,7 @@ expenseForm.addEventListener('submit', async (e) => {
             description: document.getElementById('desc').value,
             amount: parseCurrency(document.getElementById('amount').value),
             category: document.getElementById('category').value,
+            isFixed: document.getElementById('is-fixed').checked,
             date: new Date().toLocaleDateString(),
             receipt: receiptData
         };
@@ -101,6 +158,37 @@ function saveAndRefresh() {
     updateUI();
 }
 
+function checkRecurringAndInstallments() {
+    const now = new Date();
+    const currentMonthStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+    
+    // Pega o mês anterior para clonar gastos fixos
+    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthStr = `${lastMonthDate.getFullYear()}-${(lastMonthDate.getMonth() + 1).toString().padStart(2, '0')}`;
+
+    const currentExpenses = expenses.filter(exp => {
+        const [d, m, y] = exp.date.split('/');
+        return `${y}-${m.padStart(2, '0')}` === currentMonthStr;
+    });
+
+    const fixedFromLastMonth = expenses.filter(exp => {
+        const [d, m, y] = exp.date.split('/');
+        return exp.isFixed && `${y}-${m.padStart(2, '0')}` === lastMonthStr;
+    });
+
+    fixedFromLastMonth.forEach(oldExp => {
+        const alreadyCloned = currentExpenses.some(curr => curr.description === oldExp.description && curr.isFixed);
+        if (!alreadyCloned) {
+            expenses.push({
+                ...oldExp,
+                id: Date.now() + Math.random(),
+                date: now.toLocaleDateString('pt-BR')
+            });
+        }
+    });
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+}
+
 function deleteExpense(id) {
     if (editingId === id) {
         editingId = null;
@@ -118,6 +206,7 @@ function editExpense(id) {
     document.getElementById('desc').value = exp.description;
     document.getElementById('amount').value = formatCurrency(exp.amount);
     document.getElementById('category').value = exp.category;
+    document.getElementById('is-fixed').checked = exp.isFixed || false;
 
     editingId = id;
     expenseForm.querySelector('button[type="submit"]').innerText = 'Atualizar Gasto';
@@ -185,14 +274,20 @@ function updateUI() {
     expensesList.innerHTML = '';
     const filtered = getFilteredExpenses();
     let totalSpent = 0;
+    let fixedTotal = 0;
+    let variableTotal = 0;
 
     filtered.forEach(exp => {
         totalSpent += exp.amount;
+        if (exp.isFixed) fixedTotal += exp.amount;
+        else variableTotal += exp.amount;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${exp.description}</td>
             <td>${exp.category}</td>
-            <td>${formatCurrency(exp.amount)}</td>
+            <td>${exp.isFixed ? '<span class="badge-fixed">Fixa</span>' : '<span class="badge-once">1x</span>'}</td>
+            <td>${formatCurrency(exp.amount || 0)}</td>
             <td>${exp.receipt ? `<a href="${exp.receipt}" target="_blank">Ver</a>` : '-'}</td>
             <td>
                 <button onclick="editExpense(${exp.id})" class="btn-primary" style="padding: 5px 10px; margin-right: 5px;">Editar</button>
@@ -203,10 +298,38 @@ function updateUI() {
     });
 
     document.getElementById('total-spent').innerText = formatCurrency(totalSpent);
-    const remaining = budget - totalSpent;
-    const remainingEl = document.getElementById('remaining-balance');
-    remainingEl.innerText = formatCurrency(remaining);
-    remainingEl.className = remaining >= 0 ? 'positive' : 'negative';
+    document.getElementById('fixed-total').innerText = formatCurrency(fixedTotal);
+    document.getElementById('variable-total').innerText = formatCurrency(variableTotal);
+    
+    // Saldo disponível após gastos
+    const availableAfterExpenses = budget - totalSpent;
+    
+    // Saldo que sobra depois que você tira o dinheiro da carteira e da meta
+    const finalReserve = availableAfterExpenses - walletValue - savingsGoal;
+    const reserveEl = document.getElementById('final-reserve');
+    reserveEl.innerText = formatCurrency(finalReserve);
+    reserveEl.style.color = finalReserve >= 0 ? '#2c3e50' : 'var(--danger)';
+
+    // Lógica da Meta de Economia
+    const goalStatus = document.getElementById('goal-status');
+    const goalBar = document.getElementById('goal-bar');
+    
+    if (savingsGoal > 0) {
+        const goalPercent = Math.min(Math.max((availableAfterExpenses / savingsGoal) * 100, 0), 100);
+        goalBar.style.width = goalPercent + '%';
+        goalBar.style.backgroundColor = goalPercent >= 100 ? 'var(--success)' : 'var(--primary)';
+        goalStatus.innerText = goalPercent >= 100 ? "Meta alcançada!" : `${goalPercent.toFixed(0)}% da meta`;
+    } else {
+        goalBar.style.width = '0%';
+        goalStatus.innerText = "Sem meta definida";
+    }
+
+    // Atualiza Barra de Progresso
+    const percent = budget > 0 ? Math.min((totalSpent / budget) * 100, 100) : 0;
+    const progressBar = document.getElementById('progress-bar');
+    progressBar.style.width = percent + '%';
+    progressBar.style.backgroundColor = percent > 90 ? 'var(--danger)' : (percent > 70 ? '#e67e22' : 'var(--success)');
+    document.getElementById('progress-text').innerText = `${percent.toFixed(1)}% do salário utilizado`;
 
     updateChart(filtered);
 }
