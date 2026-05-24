@@ -7,7 +7,6 @@ const USERS = {
     'elvisbezerracabralbj03@gmail.com': 'Elvis',
     'anapaulacabralbj@gmail.com': 'ANA'
 };
-const ADMIN_PASS = '15112020'; // Definindo a senha para evitar erro de referência
 
 document.getElementById('login-form')?.addEventListener('submit', function(e) {
     e.preventDefault();
@@ -28,7 +27,8 @@ document.getElementById('login-form')?.addEventListener('submit', function(e) {
 // Observador de estado de autenticação (Proteção de rota e UI)
 onAuthStateChanged(auth, (user) => {
     const userDisplay = document.getElementById('user-display');
-    const isIndex = window.location.pathname.includes('index.html');
+    const path = window.location.pathname;
+    const isIndex = path.endsWith('/') || path.includes('index.html');
 
     if (user) {
         const userName = USERS[user.email] || user.displayName || 'Usuário';
@@ -39,11 +39,11 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// Lógica Unificada para Menu, Navegação e Modal (Delegação de Eventos)
+// Lógica unificada para menu e navegação
 document.addEventListener('click', (e) => {
     const dropdownMenu = document.getElementById('dropdown-menu') || document.querySelector('.dropdown-content');
     const sectionHome = document.getElementById('section-home');
-    const sectionAdmin = document.getElementById('section-admin');
+    const sectionHistory = document.getElementById('section-history');
     const menuBtn = e.target.closest('#menu-btn');
 
     // Abrir/Fechar o Menu
@@ -62,15 +62,19 @@ document.addEventListener('click', (e) => {
     if (e.target.id === 'menu-home') {
         e.preventDefault();
         sectionHome?.classList.remove('hidden');
-        sectionAdmin?.classList.add('hidden');
+        sectionHistory?.classList.add('hidden');
+        dropdownMenu?.classList.remove('show');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (typeof window.updateUI === 'function') window.updateUI();
     }
 
     // Navegação: Histórico de Gastos
     if (e.target.id === 'menu-history') {
         e.preventDefault();
         sectionHome?.classList.add('hidden');
-        sectionAdmin?.classList.remove('hidden');
+        sectionHistory?.classList.remove('hidden');
+        dropdownMenu?.classList.remove('show');
+        if (typeof window.updateUI === 'function') window.updateUI();
     }
 
     // Botão Sair (Logout)
@@ -79,24 +83,5 @@ document.addEventListener('click', (e) => {
         signOut(auth).then(() => {
             window.location.href = 'login.html';
         });
-    }
-
-    // Fechar Modal Admin
-    if (e.target.id === 'admin-close') {
-        document.getElementById('admin-modal').style.display = 'none';
-    }
-
-    // Confirmar Login Admin
-    if (e.target.id === 'admin-login-confirm') {
-        const email = document.getElementById('admin-email').value;
-        const pass = document.getElementById('admin-pass').value;
-        if (USERS[email] && pass === ADMIN_PASS) {
-            document.getElementById('admin-modal').style.display = 'none';
-            sectionHome?.classList.add('hidden');
-            sectionAdmin?.classList.remove('hidden');
-            alert("Acesso concedido ao Painel Administrativo.");
-        } else {
-            alert("Credenciais administrativas incorretas!");
-        }
     }
 });

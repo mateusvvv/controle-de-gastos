@@ -18,53 +18,48 @@
             <div style="display: flex; align-items: center; gap: 20px;">
                 <span id="user-display"></span>
                 <div class="menu-container">
-                <button id="menu-btn" class="btn-primary">Menu</button>
-                <div id="dropdown-menu" class="dropdown-content">
-                    <a href="#" id="menu-home">Início</a>
-                    <a href="#" id="menu-history" class="hidden">Histórico de Gastos</a>
-                    <hr>
-                    <a href="#" id="logout-btn" style="color: var(--danger);">Sair</a>
+                    <button id="menu-btn" class="btn-primary">Menu</button>
+                    <div id="dropdown-menu" class="dropdown-content">
+                        <a href="#" id="menu-home">Início</a>
+                        <a href="#" id="menu-history" class="hidden">Histórico de Gastos</a>
+                        <hr>
+                        <a href="#" id="logout-btn" style="color: var(--danger);">Sair</a>
+                    </div>
                 </div>
             </div>
         </div>
     </nav>
-
-    <!-- Modal de Login Admin -->
-    <div id="admin-modal" class="modal">
-        <div class="modal-content">
-            <h3>Acesso Restrito</h3>
-            <p>Insira as credenciais de administrador</p>
-            <input type="email" id="admin-email" placeholder="E-mail admin">
-            <input type="password" id="admin-pass" placeholder="Senha">
-            <div class="modal-footer">
-                <button id="admin-login-confirm" class="btn-primary">Entrar</button>
-                <button id="admin-close" class="btn-danger">Cancelar</button>
-            </div>
-        </div>
-    </div>
 
     <main class="container">
         <section id="section-home" class="view-section">
             <button id="toggle-summary-btn" class="btn-summary-toggle">📊 Ver Resumo Financeiro</button>
             
             <div class="summary hidden-summary" id="summary-grid">
-            <div class="card">
-                <h3>Salário/Renda</h3>
-                <input type="text" id="monthly-budget" placeholder="R$ 0,00">
+            <div class="card grouped-card income-card">
+                <div class="metric-block">
+                    <h3>Salário/Renda</h3>
+                    <input type="text" id="monthly-budget" placeholder="R$ 0,00">
+                </div>
+                <div class="metric-block reserve-block">
+                    <h3>Saldo Não Alocado</h3>
+                    <p id="final-reserve">R$ 0,00</p>
+                </div>
             </div>
-            <div class="card">
-                <h3>Dívidas Fixas</h3>
-                <p id="fixed-total" class="negative">R$ 0,00</p>
-            </div>
-            <div class="card">
-                <h3>Dívidas Pontuais</h3>
-                <p id="variable-total" class="negative">R$ 0,00</p>
+            <div class="card grouped-card debt-card">
+                <div class="metric-block">
+                    <h3>Dívidas Fixas</h3>
+                    <p id="fixed-total" class="fixed-debt-value">R$ 0,00</p>
+                </div>
+                <div class="metric-block">
+                    <h3>Dívidas Pontuais</h3>
+                    <p id="variable-total" class="variable-debt-value">R$ 0,00</p>
+                </div>
             </div>
             <div class="card">
                 <h3>Total Gasto</h3>
-                <p id="total-spent" style="color: #e67e22; font-weight: bold; font-size: 1.5em;">R$ 0,00</p>
+                <p id="total-spent" class="total-spent-value">R$ 0,00</p>
             </div>
-            <div class="card">
+            <div class="card wallet-card">
                 <h3>Na Carteira (Alocado)</h3>
                 <input type="text" id="wallet-value" placeholder="R$ 0,00">
             </div>
@@ -73,10 +68,6 @@
                 <input type="text" id="savings-goal" placeholder="Definir meta R$">
                 <div class="progress-container mini"><div id="goal-bar" class="progress-bar goal-bg"></div></div>
                 <p id="goal-status" class="mini-text"></p>
-            </div>
-            <div class="card" style="background-color: #f8f9fa; border: 1px dashed var(--primary);">
-                <h3>Saldo Não Alocado</h3>
-                <p id="final-reserve" style="font-weight: bold; font-size: 1.5em; color: #2c3e50;">R$ 0,00</p>
             </div>
             </div>
             
@@ -89,7 +80,10 @@
             <div class="charts">
             <div class="card">
                 <h3>Distribuição por Categoria</h3>
-                <canvas id="expenseChart"></canvas>
+                <div class="chart-wrapper">
+                    <canvas id="expenseChart" width="900" height="300"></canvas>
+                    <p id="chart-empty-message" class="chart-empty-message hidden">Sem gastos neste mês</p>
+                </div>
             </div>
             </div>
 
@@ -99,7 +93,10 @@
                 <form id="expense-form">
                     <input type="text" id="desc" placeholder="Descrição (ex: Aluguel)" required>
                     <input type="text" id="amount" placeholder="Valor (R$)" required>
-                    <input type="number" id="installments" placeholder="Nº de Parcelas (1 para à vista)" min="1" value="1">
+                    <div class="installments-row">
+                        <label for="installments">Parcelas</label>
+                        <input type="number" id="installments" min="1" value="1">
+                    </div>
                     <select id="category">
                         <option value="Moradia">Moradia</option>
                         <option value="Alimentação">Alimentação</option>
@@ -112,7 +109,7 @@
                         <label for="is-fixed">Despesa Fixa (Mensal)</label>
                     </div>
                     <div class="file-input">
-                        <label for="receipt">Comprovante (Imagem)</label>
+                        <label for="receipt" class="upload-btn">Comprovante</label>
                         <input type="file" id="receipt" accept="image/*">
                     </div>
                     <button type="submit" class="btn-success">Adicionar</button>
@@ -121,11 +118,11 @@
             </div>
         </section>
 
-        <section id="section-admin" class="view-section hidden">
+        <section id="section-history" class="view-section hidden">
             <div class="history">
             <div class="card">
                 <div class="header-table">
-                    <h3>Painel Administrativo - Histórico</h3>
+                    <h3>Histórico de Gastos</h3>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <input type="month" id="month-filter" style="margin: 0; width: auto;">
                         <button id="generate-pdf" class="btn-primary">Relatório PDF</button>

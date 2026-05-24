@@ -38,6 +38,35 @@ const applyMask = (e) => {
     e.target.value = value ? "R$ " + value : "";
 };
 
+const getExpenseYearMonth = (dateStr) => {
+    if (!dateStr) return null;
+
+    if (typeof dateStr.toDate === 'function') {
+        const date = dateStr.toDate();
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    if (dateStr instanceof Date) {
+        return `${dateStr.getFullYear()}-${String(dateStr.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    const parts = String(dateStr).split(/[-/]/);
+
+    if (parts.length < 3) return null;
+    if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}`;
+    }
+
+    const first = Number(parts[0]);
+    const second = Number(parts[1]);
+    const month = second > 12 ? first : second;
+    return `${parts[2]}-${String(month).padStart(2, '0')}`;
+};
+
+const getExpenseMonth = (expense) => {
+    return getExpenseYearMonth(expense.date) || getExpenseYearMonth(expense.createdAt);
+};
+
 // Observador de Autenticação e Carregamento de Dados
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -56,15 +85,15 @@ onAuthStateChanged(auth, async (user) => {
             walletInput.value = walletValue > 0 ? formatCurrency(walletValue) : "";
         }
 
-        // Carregar Coleção de Gastos
-        const q = query(collection(db, "users", user.uid, "expenses"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
-        expenses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
         // Define o mês atual como padrão no filtro
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
         document.getElementById('month-filter').value = currentMonth;
+
+        // Carregar Coleção de Gastos
+        const q = query(collection(db, "users", user.uid, "expenses"), orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        expenses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         await checkRecurringAndInstallments();
         updateUI();
@@ -85,26 +114,26 @@ async function updateUserSettings() {
     }, { merge: true });
 }
 
-budgetInput.addEventListener('input', applyMask);
-budgetInput.addEventListener('change', async (e) => {
+budgetInput.addEventListener('input', (e) => {
+    applyMask(e);
     budget = parseCurrency(e.target.value);
-    await updateUserSettings();
     updateUI();
 });
+budgetInput.addEventListener('change', updateUserSettings);
 
-savingsGoalInput.addEventListener('input', applyMask);
-savingsGoalInput.addEventListener('change', async (e) => {
+savingsGoalInput.addEventListener('input', (e) => {
+    applyMask(e);
     savingsGoal = parseCurrency(e.target.value);
-    await updateUserSettings();
     updateUI();
 });
+savingsGoalInput.addEventListener('change', updateUserSettings);
 
-walletInput.addEventListener('input', applyMask);
-walletInput.addEventListener('change', async (e) => {
+walletInput.addEventListener('input', (e) => {
+    applyMask(e);
     walletValue = parseCurrency(e.target.value);
-    await updateUserSettings();
     updateUI();
 });
+walletInput.addEventListener('change', updateUserSettings);
 
 amountInput.addEventListener('input', applyMask);
 
@@ -129,11 +158,12 @@ expenseForm.addEventListener('submit', async (e) => {
     if (!editingId && installments > 1) {
         // Lógica de Parcelamento
         const startDate = new Date();
+        const installmentAmount = amount / installments;
         for (let i = 0; i < installments; i++) {
             const futureDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, 15);
             const newExpenseData = {
                 description: `${description} (${i + 1}/${installments})`,
-                amount: amount,
+                amount: installmentAmount,
                 category: category,
                 isFixed: false,
                 date: futureDate.toLocaleDateString('pt-BR'),
@@ -168,7 +198,7 @@ expenseForm.addEventListener('submit', async (e) => {
             amount: parseCurrency(document.getElementById('amount').value),
             category: document.getElementById('category').value,
             isFixed: document.getElementById('is-fixed').checked,
-            date: new Date().toLocaleDateString(),
+            date: new Date().toLocaleDateString('pt-BR'),
             receipt: receiptData,
             createdAt: serverTimestamp()
         };
@@ -196,13 +226,11 @@ async function checkRecurringAndInstallments() {
     const lastMonthStr = `${lastMonthDate.getFullYear()}-${(lastMonthDate.getMonth() + 1).toString().padStart(2, '0')}`;
 
     const currentExpenses = expenses.filter(exp => {
-        const [d, m, y] = exp.date.split('/');
-        return `${y}-${m.padStart(2, '0')}` === currentMonthStr;
+        return getExpenseYearMonth(exp.date) === currentMonthStr;
     });
 
     const fixedFromLastMonth = expenses.filter(exp => {
-        const [d, m, y] = exp.date.split('/');
-        return exp.isFixed && `${y}-${m.padStart(2, '0')}` === lastMonthStr;
+        return exp.isFixed && getExpenseYearMonth(exp.date) === lastMonthStr;
     });
 
     for (const oldExp of fixedFromLastMonth) {
@@ -237,6 +265,8 @@ async function deleteExpense(id) {
 // Expor funções para o escopo global (necessário pois o script é um módulo)
 window.editExpense = editExpense;
 window.deleteExpense = deleteExpense;
+window.updateUI = updateUI;
+updateChart([]);
 
 function editExpense(id) {
     const exp = expenses.find(e => e.id === id);
@@ -257,27 +287,37 @@ function getFilteredExpenses() {
     if (!selectedMonth) return expenses;
 
     return expenses.filter(exp => {
-        // Converte DD/MM/YYYY para YYYY-MM para comparar
-        const [day, month, year] = exp.date.split('/');
-        const expMonth = `${year}-${month.padStart(2, '0')}`;
-        return expMonth === selectedMonth;
+        return getExpenseMonth(exp) === selectedMonth;
     });
 }
 
 function updateChart(filteredData) {
-    const ctx = document.getElementById('expenseChart').getContext('2d');
+    const canvas = document.getElementById('expenseChart');
+    const emptyMessage = document.getElementById('chart-empty-message');
+    if (!canvas) return;
+
+    if (expenseChart) {
+        expenseChart.destroy();
+        expenseChart = null;
+    }
+    
+    const ctx = canvas.getContext('2d');
     
     // Agrupar totais por categoria
     const categories = ['Moradia', 'Alimentação', 'Transporte', 'Lazer', 'Outros'];
+    const data = filteredData || [];
     const totals = categories.map(cat => {
-        return filteredData
+        return data
             .filter(exp => exp.category === cat)
-            .reduce((sum, exp) => sum + exp.amount, 0);
+            .reduce((sum, exp) => sum + (exp.amount || 0), 0);
     });
 
-    // Destruir gráfico anterior para evitar sobreposição ao atualizar
-    if (expenseChart) {
-        expenseChart.destroy();
+    const hasData = totals.some(t => t > 0);
+    emptyMessage?.classList.toggle('hidden', hasData);
+
+    if (typeof Chart === 'undefined') {
+        drawFallbackChart(canvas, categories, totals, hasData);
+        return;
     }
 
     expenseChart = new Chart(ctx, {
@@ -299,13 +339,67 @@ function updateChart(filteredData) {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: true }
+                y: { 
+                    beginAtZero: true,
+                    suggestedMax: hasData ? undefined : 100,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
+                        }
+                    }
+                }
             },
             plugins: {
                 legend: { display: false }
             }
         }
+    });
+}
+
+function drawFallbackChart(canvas, labels, totals, hasData) {
+    const ctx = canvas.getContext('2d');
+    const width = canvas.clientWidth || 900;
+    const height = canvas.clientHeight || 300;
+    const ratio = window.devicePixelRatio || 1;
+
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const maxValue = Math.max(...totals, 100);
+    const chartLeft = 48;
+    const chartRight = width - 16;
+    const chartBottom = height - 42;
+    const chartTop = 18;
+    const barArea = chartRight - chartLeft;
+    const barWidth = Math.max((barArea / labels.length) * 0.58, 22);
+    const colors = ['#4a90e2', '#2ecc71', '#e67e22', '#9b59b6', '#95a5a6'];
+
+    ctx.strokeStyle = '#e5e9ef';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(chartLeft, chartTop);
+    ctx.lineTo(chartLeft, chartBottom);
+    ctx.lineTo(chartRight, chartBottom);
+    ctx.stroke();
+
+    if (!hasData) return;
+
+    labels.forEach((label, index) => {
+        const slot = barArea / labels.length;
+        const x = chartLeft + slot * index + (slot - barWidth) / 2;
+        const barHeight = ((chartBottom - chartTop) * totals[index]) / maxValue;
+        const y = chartBottom - barHeight;
+
+        ctx.fillStyle = colors[index];
+        ctx.fillRect(x, y, barWidth, barHeight);
+        ctx.fillStyle = '#5f6f7a';
+        ctx.font = '12px Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(label, x + barWidth / 2, height - 16);
     });
 }
 
@@ -347,7 +441,7 @@ function updateUI() {
     const finalReserve = availableAfterExpenses - walletValue - savingsGoal;
     const reserveEl = document.getElementById('final-reserve');
     reserveEl.innerText = formatCurrency(finalReserve);
-    reserveEl.style.color = finalReserve >= 0 ? '#2c3e50' : 'var(--danger)';
+    reserveEl.style.color = finalReserve >= 0 ? '#1f7a55' : 'var(--danger)';
 
     // Lógica da Meta de Economia
     const goalStatus = document.getElementById('goal-status');
